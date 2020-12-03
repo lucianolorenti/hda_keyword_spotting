@@ -12,6 +12,7 @@ setup(name='KeywordSpotter',
       install_requires=[
           'opencv-python',
           'pandas',
-          'tqdm'
+          'tqdm',
+          'scipy'
       ],
       )

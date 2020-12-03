@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('feature_extraction')
 
 # if __name__ == '__main__':
-path = Path('/home/luciano/speech/')
+path = Path('/home/lucianolorenti/data')
 temp = {}
 
 for name in tqdm(list(path.glob('**/*.wav'))):

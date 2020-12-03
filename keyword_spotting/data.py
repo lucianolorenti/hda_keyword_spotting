@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import tensorflow as tf
 import pickle
-import progressbar
+from tqdm.auto import tqdm
 
 
 
