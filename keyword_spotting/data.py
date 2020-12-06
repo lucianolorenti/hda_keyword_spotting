@@ -1,12 +1,12 @@
+import math
+import pickle
 from pathlib import Path
 from typing import Union
+
 import numpy as np
 import tensorflow as tf
-import pickle
-from tqdm.auto import tqdm
 from sklearn.utils import shuffle
-import math 
-
+from tqdm.auto import tqdm
 
 
 class LRUDataCache:
@@ -32,8 +32,6 @@ class LRUDataCache:
 
     def __len__(self):
         return len(self.data)
-
-
 
 
 def obtain_target(f):
@@ -83,7 +81,8 @@ class Dataset:
                  for f in self.folder.glob('**/*.wav')]
 
         self.testing_files = read_lines(self.folder/'testing_list.txt')
-        self.validation_files = read_lines(self.folder/'validation_list.txt')[:500]
+        self.validation_files = read_lines(
+            self.folder/'validation_list.txt')[:500]
 
         self.training_files = list(
             set(files) - set(self.testing_files) - set(self.validation_files))[:5000]
@@ -106,7 +105,7 @@ class Dataset:
         self.training_labels = [self.label_to_index[l]
                                 for l in self.training_labels]
         self.testing_labels = [self.label_to_index[l]
-            for l in self.testing_labels]
+                               for l in self.testing_labels]
         self.validation_labels = [self.label_to_index[l]
                                   for l in self.validation_labels]
 
@@ -147,7 +146,6 @@ class Iterator:
         self.i = 0
         self.shuffle = shuffle
 
-
     @property
     def shape(self):
         return self[0][0].shape
@@ -163,7 +161,6 @@ class Iterator:
             file_path = self.dataset.full_path(f)
             with open(file_path, 'rb') as file:
                 frames = pickle.load(file)
-            window_width = self.left+self.right
             for i in range(self.left, frames.shape[0]-self.right):
                 elements.append((file_path, label, i))
 
@@ -180,13 +177,13 @@ class Iterator:
     def at_end(self):
         return self.i == len(self.elements)
 
-    def __getitem__(self, i: int):       
+    def __getitem__(self, i: int):
         return self._load_data(i)
 
     def __len__(self):
         return len(self.elements)
 
-    def _load_data(self, index):        
+    def _load_data(self, index):
         file_path = self.elements[index][0]
         with open(file_path, 'rb') as file:
             frames = pickle.load(file)
@@ -195,10 +192,10 @@ class Iterator:
         label = [self.elements[index][1]]
         window_width = self.left+self.right
 
-        sliding = frames[i-self.left:i+self.right]
+        sliding = frames[i-self.left:i+self.right, :]
         if sliding.shape[0] < window_width:
-            sliding = np.hstack(sliding, 
-            np.zeros(window_width-sliding.shape[0], sliding.shape[1]))
+            sliding = np.hstack(sliding,
+                                np.zeros(window_width-sliding.shape[0], sliding.shape[1]))
         return (sliding, label)
 
     def __next__(self):
@@ -207,7 +204,6 @@ class Iterator:
         ret = self.__getitem__(self.i)
         self.i += 1
         return ret
-
 
 
 class Batcher:

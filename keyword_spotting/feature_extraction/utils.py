@@ -129,7 +129,7 @@ def mel_to_frequency(m, const=1125):
     return (700 * (10**(m / const) - 1))
 
 
-def filter_banks(pow_frames, sample_rate, NFFT, nfilt):
+def filter_banks(pow_frames, sample_rate, NFFT, nfilt, num_ceps: int = 12, cep_lifter: int = 22):
     hz_points = mel_to_frequency(
         np.linspace(0,
                     frequency_to_mel(sample_rate),
@@ -151,8 +151,6 @@ def filter_banks(pow_frames, sample_rate, NFFT, nfilt):
         float).eps, filter_banks)  # Numerical Stability
     filter_banks = 20 * np.log10(filter_banks)
 
-    num_ceps = 12
-    cep_lifter = 22
     mfcc = dct(filter_banks, type=2, axis=1, norm='ortho')[
         :, 1: (num_ceps + 1)]
     (nframes, ncoeff) = mfcc.shape
