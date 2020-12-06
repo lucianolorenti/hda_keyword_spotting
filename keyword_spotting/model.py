@@ -1,9 +1,13 @@
 import tensorflow as tf
-from tensorflow.python.ops import math_ops
-from tensorflow.python.keras import backend as K
-from tensorflow.python.keras.layers import (Input,Dropout, Lambda, Flatten, Dense, Conv2D, BatchNormalization)
 from tcn import TCN
 from tensorflow.keras import Model
+from tensorflow.python.keras import backend as K
+from tensorflow.python.keras.layers import (Activation, AveragePooling2D,
+                                            BatchNormalization, Conv2D, Dense,
+                                            Dropout, Flatten, Input, Lambda,
+                                            SpatialDropout2D)
+from tensorflow.python.ops import math_ops
+
 
 class Sum1(tf.keras.constraints.Constraint):
     """Constrains the weights incident to each hidden unit to have unit norm.
@@ -26,13 +30,13 @@ class Sum1(tf.keras.constraints.Constraint):
 
     def __call__(self, w):
         return w / (
-            K.epsilon() + 
-                math_ops.reduce_sum(w, axis=self.axis, keepdims=True))
+            K.epsilon() +
+            math_ops.reduce_sum(w, axis=self.axis, keepdims=True))
 
     def get_config(self):
         return {'axis': self.axis}
 
-    
+
 class DNNModel:
     def __init__(self, input_shape, number_of_classes):
         self.build_model(input_shape, number_of_classes)
@@ -40,10 +44,8 @@ class DNNModel:
     def build_model(self, input_shape, number_of_classes):
         pass
 
-  
     def description(self):
         pass
-   
 
 
 def get_model(input_shape, number_of_classes):
@@ -55,12 +57,13 @@ def get_model(input_shape, number_of_classes):
         tf.keras.layers.Dense(128, activation='relu'),
         tf.keras.layers.Dense(number_of_classes, activation='softmax')
     ])
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001)
 
     model.compile(optimizer=optimizer,
                   metrics=['accuracy'],
                   loss='sparse_categorical_crossentropy')
     return model
+
 
 def ExpandDimension():
     return Lambda(lambda x: K.expand_dims(x))
@@ -72,34 +75,41 @@ def get_model_2(input_shape, number_of_classes):
     x = ExpandDimension()(x)
 
     x = Conv2D(16,
-                kernel_size=(3, 7),
-                activation='relu',
-                padding='same',
-                use_bias=True)(x)
-    x = BatchNormalization()(x)        
-    x = Dropout(0.2)(x)
-    x = Flatten()(x)   
-    x = Dense(128, activation='relu')(x)
-    x = BatchNormalization()(x) 
-    x = Dropout(0.2)(x)
-    x = Dense(number_of_classes, activation='softmax')(x)
-    model =  Model(inputs=[input], outputs=[x])
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001, clipnorm=0.2, clipvalue=0.5)
+               strides=(1, 3),
+               kernel_size=(3, 7),
+               padding='same',
+               use_bias=False)(x)
+
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+    x = SpatialDropout2D(0.3)(x)
+
+    x = Flatten()(x)
+    x = Dense(64, kernel_regularizer=tf.keras.regularizers.L2(0.001))(x)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+
+    x = Dense(number_of_classes, activation='softmax',
+              kernel_regularizer=tf.keras.regularizers.L2(0.001))(x)
+    model = Model(inputs=[input], outputs=[x])
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
     model.compile(optimizer=optimizer,
                   metrics=['accuracy'],
                   loss='sparse_categorical_crossentropy')
     return model
+
 
 def get_model_tcn(input_shape, number_of_classes):
     input = Input(shape=input_shape)
     x = input
-    x = TCN(32,use_skip_connections=True, dropout_rate=0.3, use_batch_norm=True)(x)
+    x = TCN(32, use_skip_connections=True,
+            dropout_rate=0.3, use_batch_norm=True)(x)
     x = Dense(128, activation='relu')(x)
     x = Dense(number_of_classes, activation='softmax')(x)
-    model =  Model(inputs=[input], outputs=[x])
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001,  clipnorm=0.001, clipvalue=0.001)
+    model = Model(inputs=[input], outputs=[x])
+    optimizer = tf.keras.optimizers.Adam(
+        learning_rate=0.0001,  clipnorm=0.001, clipvalue=0.001)
     model.compile(optimizer=optimizer,
                   metrics=['accuracy'],
                   loss='sparse_categorical_crossentropy')
     return model
-

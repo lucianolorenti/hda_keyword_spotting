@@ -1,5 +1,7 @@
+import functools
 import math
 import pickle
+from multiprocessing import Manager, Pool
 from pathlib import Path
 from typing import Union
 
@@ -8,16 +10,23 @@ import tensorflow as tf
 from sklearn.utils import shuffle
 from tqdm.auto import tqdm
 
+from keyword_spotting.feature_extraction.pipeline import Transformer
+
+manager = Manager()
+
 
 class LRUDataCache:
     def __init__(self, max_elem):
         self.max_elem = max_elem
-        self.data = {}
+        self.data = manager.dict()
 
     def get(self, key):
         self.data[key]['hit'] += 1
 
         return self.data[key]['elem']
+
+    def __contains__(self, key):
+        return key in self.data
 
     def add(self, key, elem):
         if len(self.data) == self.max_elem:
@@ -73,6 +82,45 @@ def change_extension(l, ext):
         l[i] = change_extension_to(file, ext)
 
 
+class RawDataset:
+    def __init__(self, path: Path):
+        self.folder = Path(path)
+
+        files = [str(f.relative_to(self.folder))
+                 for f in self.folder.glob('**/*.wav')]
+
+        self.testing_files = read_lines(self.folder/'testing_list.txt')
+        self.validation_files = read_lines(self.folder/'validation_list.txt')
+
+        self.training_files = list(
+            set(files) - set(self.testing_files) - set(self.validation_files))
+
+        self.training_labels = [obtain_target(f) for f in self.training_files]
+        self.testing_labels = [obtain_target(f) for f in self.testing_files]
+        self.validation_labels = [obtain_target(
+            f) for f in self.validation_files]
+
+        self.labels_unique = np.unique(self.training_labels)
+        self.label_to_index = {label: idx for idx,
+                               label in enumerate(self.labels_unique)}
+        self.index_to_label = {idx: label for idx,
+                               label in enumerate(self.labels_unique)}
+
+        self.training_labels = [self.label_to_index[l]
+                                for l in self.training_labels]
+        self.testing_labels = [self.label_to_index[l]
+                               for l in self.testing_labels]
+        self.validation_labels = [self.label_to_index[l]
+                                  for l in self.validation_labels]
+
+    @property
+    def number_of_classes(self):
+        return len(self.labels_unique)
+
+    def full_path(self, file_name):
+        return self.folder / file_name
+
+
 class Dataset:
     def __init__(self, folder):
         self.folder = Path(folder)
@@ -81,11 +129,10 @@ class Dataset:
                  for f in self.folder.glob('**/*.wav')]
 
         self.testing_files = read_lines(self.folder/'testing_list.txt')
-        self.validation_files = read_lines(
-            self.folder/'validation_list.txt')[:500]
+        self.validation_files = read_lines(self.folder/'validation_list.txt')
 
         self.training_files = list(
-            set(files) - set(self.testing_files) - set(self.validation_files))[:5000]
+            set(files) - set(self.testing_files) - set(self.validation_files))
 
         change_extension(self.training_files, '.pkl')
         change_extension(self.testing_files, '.pkl')
@@ -123,10 +170,20 @@ class Dataset:
         return self.folder / file_name
 
 
+def process(iterator,  f):
+    file_path = iterator.dataset.full_path(f)
+    frames = iterator.load_file(file_path)
+    return list(range(iterator.left, frames.shape[0]-iterator.right))
+
+
 class Iterator:
     def __init__(self,
                  dataset: Dataset,
+                 preprocessor,
+
                  what: str,
+                 left: int = 23,
+                 right: int = 8,
                  shuffle: Union[bool, str] = False):
         self.dataset = dataset
         if what == 'train':
@@ -139,39 +196,35 @@ class Iterator:
             files = self.dataset.testing_files
             labels = self.dataset.testing_labels
 
-        self.cache = LRUDataCache(50)
-        self.left = 23
-        self.right = 8
-        self.elements = self.compute_elements(what, files, labels)
+        self.cache = LRUDataCache(52550)
+        self.left = left
+        self.right = right
+        self.preprocessor = preprocessor
+        self.elements = self.compute_elements(files)
         self.i = 0
         self.shuffle = shuffle
+
+        self.__iter__()
 
     @property
     def shape(self):
         return self[0][0].shape
 
-    def compute_elements(self, what, files, labels):
-        cached_elements_path = self.dataset.folder / f'{what}_elements.pkl'
-        if (cached_elements_path).is_file():
-            with open(cached_elements_path, 'rb') as file:
-                return pickle.load(file)
+    def load_file(self, file_path):
+        return self.preprocessor.transform(str(file_path))
 
-        elements = []
-        for f, label in tqdm(list(zip(files, labels))):
-            file_path = self.dataset.full_path(f)
-            with open(file_path, 'rb') as file:
-                frames = pickle.load(file)
-            for i in range(self.left, frames.shape[0]-self.right):
-                elements.append((file_path, label, i))
+    def compute_elements(self,  files):
 
-        with open(cached_elements_path, 'wb') as file:
-            pickle.dump(elements, file)
+        with Pool(2) as p:
+            elements = list(tqdm(
+                p.imap(functools.partial(process, self),  files), total=len(files)))
+
         return elements
 
     def __iter__(self):
         self.i = 0
         if self.shuffle:
-            shuffle(self.elements)
+            self.elements = shuffle(self.elements)
         return self
 
     def at_end(self):
@@ -185,17 +238,17 @@ class Iterator:
 
     def _load_data(self, index):
         file_path = self.elements[index][0]
-        with open(file_path, 'rb') as file:
-            frames = pickle.load(file)
+
+        if file_path in self.cache:
+            frames = self.cache.get(file_path)
+        else:
+            frames = self.load_file(file_path)
+            self.cache.add(file_path, frames)
 
         i = self.elements[index][2]
         label = [self.elements[index][1]]
-        window_width = self.left+self.right
 
         sliding = frames[i-self.left:i+self.right, :]
-        if sliding.shape[0] < window_width:
-            sliding = np.hstack(sliding,
-                                np.zeros(window_width-sliding.shape[0], sliding.shape[1]))
         return (sliding, label)
 
     def __next__(self):
@@ -248,10 +301,10 @@ class Batcher:
 
 def generate_keras_batcher(dataset,  batch_size, shuffle=False):
 
-    it_train = Iterator(dataset, 'train', shuffle)
+    it_train = Iterator(dataset, Transformer(), 'train', shuffle)
     b_train = Batcher(it_train, batch_size)
 
-    it_val = Iterator(dataset, 'validation')
+    it_val = Iterator(dataset, Transformer(), 'validation', )
     b_val = Batcher(it_val, batch_size)
     shape = it_train.shape
 
