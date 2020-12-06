@@ -13,6 +13,7 @@ setup(name='KeywordSpotter',
           'opencv-python',
           'pandas',
           'tqdm',
-          'scipy'
+          'scipy',
+          'scikit-learn'
       ],
       )
