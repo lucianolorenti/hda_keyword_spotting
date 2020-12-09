@@ -132,14 +132,14 @@ class TransformedDataset:
             path = Path(path).resolve()
         self.path = path
         self.suffix = suffix
+        if len(suffix) > 0:
+            self.suffix = '_' + suffix
         self.load_info()
         self.feature_description = {
             'data': tf.io.FixedLenFeature([self.info['nrow']*self.info['ncol']], tf.float32),
             'target': tf.io.FixedLenFeature([], tf.int64, default_value=0),
         }
         self.shape = (self.info['nrow'], self.info['ncol'])
-        if len(suffix) > 0:
-            self.suffix = '_' + suffix
 
     @property
     def number_of_classes(self):
