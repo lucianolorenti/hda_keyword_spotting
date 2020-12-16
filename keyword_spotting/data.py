@@ -113,7 +113,7 @@ class Dataset:
 
     @property
     def number_of_classes(self):
-        return len(self.labels_uniqueo)
+        return len(self.labels_unique)
 
     def full_path(self, file_name):
         return self.folder / file_name1
