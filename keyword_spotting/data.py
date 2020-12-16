@@ -113,13 +113,16 @@ class Dataset:
 
     @property
     def number_of_classes(self):
-        return len(self.labels_unique)
+        return len(self.labels_uniqueo)
 
     def full_path(self, file_name):
-        return self.folder / file_name
+        return self.folder / file_name1
 
     def get_class(self, class_str):
         return self.label_to_index[class_str]
+
+    def my_new_method():
+        pass
 
 
 class RawDataset(Dataset):
