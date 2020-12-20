@@ -69,14 +69,22 @@ def ExpandDimension():
     return Lambda(lambda x: K.expand_dims(x))
 
 
-def get_model_2(input_shape, number_of_classes):
+def cnn_trad_fpool3(input_shape, n_filters, number_of_classes):
     input = Input(shape=input_shape)
     x = input
     x = ExpandDimension()(x)
 
-    x = Conv2D(16,
+    x = Conv2D(64,
                strides=(1, 3),
-               kernel_size=(3, 7),
+               kernel_size=(20, 8),
+               padding='same',
+               use_bias=False)(x)
+
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+    x = Conv2D(64,
+               strides=(1, 1),
+               kernel_size=(10, 4),
                padding='same',
                use_bias=False)(x)
 
@@ -85,12 +93,12 @@ def get_model_2(input_shape, number_of_classes):
     x = SpatialDropout2D(0.3)(x)
 
     x = Flatten()(x)
-    x = Dense(64, kernel_regularizer=tf.keras.regularizers.L2(0.001))(x)
+    x = Dense(32)(x)
+    x = BatchNormalization()(x)
+    x = Dense(128)(x)
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
-
-    x = Dense(number_of_classes, activation='softmax',
-              kernel_regularizer=tf.keras.regularizers.L2(0.001))(x)
+    x = Dense(number_of_classes, activation='softmax')(x)
     model = Model(inputs=[input], outputs=[x])
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
     model.compile(optimizer=optimizer,
