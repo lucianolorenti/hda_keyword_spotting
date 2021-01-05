@@ -1,13 +1,10 @@
-import pickle
-from pathlib import Path
-from typing import Union
 
-import tensorflow as tf
-from keyword_spotting.data import TransformedDataset
-from keyword_spotting.model import get_model, get_model_2, get_model_tcn
 
-dataset = TransformedDataset('/home/luciano/speech2')
+from keyword_spotting.data import Dataset
+from keyword_spotting.model import get_model_2
+
+dataset = Dataset('/home/luciano/speech')
 model = get_model_2(dataset.shape, dataset.number_of_classes)
-train_data, val_data, test_data = dataset.get_iterators()
-model.fit(train_data.batch(250),
-          validation_data=val_data.batch(250), epochs=15)
+train_data, val_data, test_data = dataset.get_sequences(batch_size=256)
+model.fit(train_data,
+          validation_data=val_data, epochs=15)
