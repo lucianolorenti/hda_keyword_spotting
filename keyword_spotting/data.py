@@ -142,6 +142,8 @@ class Dataset:
         if isinstance(path, str):
             self.folder = Path(path)
 
+        self.to_numpy()
+
         files = [str(f.relative_to(self.folder))
                  for f in self.folder.glob('**/*.wav.npy')]
 

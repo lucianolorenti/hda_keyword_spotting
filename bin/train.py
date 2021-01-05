@@ -4,6 +4,7 @@ import pickle
 import time
 from pathlib import Path
 
+import mlflow
 import numpy as np
 import tensorflow as tf
 import yaml
@@ -26,8 +27,14 @@ if __name__ == '__main__':
     config = None
     with open(args.config, 'r') as file:
         config = yaml.load(file.read(), Loader=yaml.SafeLoader)
-    dataset = Dataset('/home/luciano/speech')
-    dataset.to_numpy()
+    dataset = Dataset(Path('/home/lucianolorenti/data').resolve())
+
+    current_run = mlflow.start_run()
+    mlflow.log_param("train", config['train'])
+    mlflow.log_param("model", config['model'])
+    mlflow.set_tags({
+        'estimator_name': 'cnn_trad_fpool3'
+    })
     batch_size = config['train']['batch_size']
     train_data, val_data, test_data = dataset.get_sequences(
         batch_size=batch_size)
@@ -44,7 +51,15 @@ if __name__ == '__main__':
     check_point = tf.keras.callbacks.ModelCheckpoint(model_filename)
     history = model.fit(train_data,
                         validation_data=val_data,
-                        epochs=epochs)
+                        epochs=epochs,
+                        callbacks=[check_point, early_stopping])
 
-    with open(model_filename + '_history.pkl', 'wb') as file:
-        pickle.dump(history, file)
+    loss = history.history['loss']
+    for i, n in enumerate(loss):
+        mlflow.log_metric('train_loss', v, step=i)
+
+    loss = history.history['val_loss']
+    for i, n in enumerate(loss):
+        mlflow.log_metric('val_loss', v, step=i)
+
+    mlflow.log_artifact(model_filename)

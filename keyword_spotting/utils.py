@@ -17,6 +17,7 @@ def WAV2Numpy(folder, sr=None):
         allFiles += [os.path.join(root, f) for f in files
                      if f.endswith('.wav')]
 
+
     for file in tqdm(allFiles):
         y, sr = librosa.load(file, sr=None)
         np.save(file + '.npy', y)
