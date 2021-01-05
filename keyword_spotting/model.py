@@ -72,7 +72,7 @@ def ExpandDimension():
     return Lambda(lambda x: K.expand_dims(x))
 
 
-def cnn_trad_fpool3(input_shape, n_filters, number_of_classes):
+def cnn_trad_fpool3(input_shape, number_of_classes):
     input = Input(shape=input_shape)
     x = input
     x = get_melspectrogram_layer(n_fft=1024,
