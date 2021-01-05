@@ -14,6 +14,7 @@ setup(name='KeywordSpotter',
           'pandas',
           'tqdm',
           'scipy',
-          'scikit-learn'
+          'scikit-learn',
+          'librosa'
       ],
       )

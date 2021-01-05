@@ -1,4 +1,5 @@
 import tensorflow as tf
+from kapre.composed import get_melspectrogram_layer
 from tcn import TCN
 from tensorflow.keras import Model
 from tensorflow.python.keras import backend as K
@@ -7,6 +8,8 @@ from tensorflow.python.keras.layers import (Activation, AveragePooling2D,
                                             Dropout, Flatten, Input, Lambda,
                                             SpatialDropout2D)
 from tensorflow.python.ops import math_ops
+
+from keyword_spotting.data import SAMPLE_RATE
 
 
 class Sum1(tf.keras.constraints.Constraint):
@@ -69,10 +72,16 @@ def ExpandDimension():
     return Lambda(lambda x: K.expand_dims(x))
 
 
-def cnn_trad_fpool3(input_shape, n_filters, number_of_classes):
+def cnn_trad_fpool3(input_shape, number_of_classes):
     input = Input(shape=input_shape)
     x = input
-    x = ExpandDimension()(x)
+    x = get_melspectrogram_layer(n_fft=1024,
+                                 pad_begin=True,
+                                 hop_length=128, input_shape=(SAMPLE_RATE, 1),
+                                 sample_rate=SAMPLE_RATE, n_mels=80,
+                                 mel_f_min=40.0, mel_f_max=SAMPLE_RATE/2,
+                                 return_decibel=True,
+                                 name='mel_stft')(x)
 
     x = Conv2D(64,
                strides=(1, 3),
