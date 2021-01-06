@@ -1,4 +1,5 @@
 import functools
+import logging
 import math
 import pickle
 from multiprocessing import Manager, Pool
@@ -13,6 +14,8 @@ from tqdm.auto import tqdm
 import keyword_spotting.utils
 
 SAMPLE_RATE = 16000
+
+logger = logging.getLogger(__name__)
 
 
 class LRUDataCache:
@@ -142,10 +145,8 @@ class Dataset:
         if isinstance(path, str):
             self.folder = Path(path)
 
-        self.to_numpy()
-
         files = [str(f.relative_to(self.folder))
-                 for f in self.folder.glob('**/*.wav.npy')]
+                 for f in self.folder.glob('**/*.wav')]
 
         self.testing_files = read_lines(self.folder/'testing_list.txt')
         self.validation_files = read_lines(self.folder/'validation_list.txt')
@@ -213,3 +214,50 @@ class Dataset:
         return (self.keras_sequence('train', batch_size=batch_size),
                 self.keras_sequence('validation', batch_size=batch_size),
                 self.keras_sequence('test', batch_size=batch_size))
+
+
+class TransformedDataset:
+    def __init__(self, path: Union[Path, str], suffix=''):
+        if isinstance(path, str):
+            path = Path(path).resolve()
+        self.path = path
+        self.suffix = suffix
+        if len(suffix) > 0:
+            self.suffix = '_' + suffix
+        self.load_info()
+        self.feature_description = {
+            'data': tf.io.FixedLenFeature([self.info['nrow']*self.info['ncol']], tf.float32),
+            'target': tf.io.FixedLenFeature([], tf.int64, default_value=0),
+        }
+        self.shape = (self.info['nrow'], self.info['ncol'])
+
+    @property
+    def number_of_classes(self):
+        return self.info['n_classes']
+
+    def load_info(self):
+        with open(self.path / f'output_info{self.suffix}', 'rb') as file:
+            self.info = pickle.load(file)
+
+        print(self.info)
+
+    def generate_dataset(self, what: str):
+        def _parse_data(pattern):
+            parsed = tf.io.parse_single_example(
+                pattern, self.feature_description)
+            data = tf.reshape(
+                parsed['data'],
+                shape=self.shape
+            )
+            return data, parsed['target']
+        dataset = tf.data.TFRecordDataset(
+            str(self.path / f'output_{what}{self.suffix}'))
+        return dataset.map(_parse_data)
+
+    def get_sequences(self, batch_size: int = 32):
+
+        return (
+            self.generate_dataset('train').batch(batch_size),
+            self.generate_dataset('validation').batch(batch_size),
+            self.generate_dataset('test').batch(batch_size),
+        )

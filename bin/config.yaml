@@ -1,7 +1,10 @@
 train:
-  batch_size: 256
-  epochs: 100
+  batch_size: 512
+  epochs: 1
 
 model:
-  path: /home/lucianolorenti
-  name: Test
+  path: /home/luciano
+  name: 'cnn_trad_fpool3'
+
+dataset:
+  path: /home/luciano/speech3

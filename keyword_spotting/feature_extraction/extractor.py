@@ -10,6 +10,8 @@ from keyword_spotting.data import Dataset
 from keyword_spotting.feature_extraction.utils import extract_features
 from tqdm.auto import tqdm
 
+logger = logging.getLogger(__name__)
+
 
 def _float_feature(value):
     """Returns a float_list from a float / double."""
@@ -39,6 +41,7 @@ class FeatureExtractor:
             self.suffix = '_' + suffix
 
     def write(self):
+        logger.debug('Writing')
         self.nrow, self.ncol = self.write_dataset(
             self.dataset.training_files, 'train')
         self.write_dataset(self.dataset.testing_files, 'test')
@@ -58,6 +61,7 @@ class FeatureExtractor:
     def write_dataset(self, files: list, what: str):
         nrow = None
         ncol = None
+        print(str(self.output_path / f'output_{what}{self.suffix}'))
         writer = tf.io.TFRecordWriter(
             str(self.output_path / f'output_{what}{self.suffix}'))
         for name in tqdm(files):

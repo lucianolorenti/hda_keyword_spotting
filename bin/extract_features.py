@@ -10,7 +10,7 @@ from keyword_spotting.data import Dataset
 from keyword_spotting.feature_extraction.extractor import FeatureExtractor
 from tqdm.auto import tqdm
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger('feature_extraction')
 
 
@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     path = Path(args.input_path)
     output_path = Path(args.output_path)
-
+    output_path.mkdir(exist_ok=True)
     dataset = Dataset(path)
     extractor = FeatureExtractor(dataset, output_path, args.name)
     extractor.write()

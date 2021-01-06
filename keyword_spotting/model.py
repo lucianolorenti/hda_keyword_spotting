@@ -73,15 +73,13 @@ def ExpandDimension():
 
 
 def cnn_trad_fpool3(input_shape, number_of_classes):
+    """
+    Convolutional Neural Networks for Small-footprint Keyword Spotting
+    Tara N. Sainath, Carolina Parada
+    """
     input = Input(shape=input_shape)
     x = input
-    x = get_melspectrogram_layer(n_fft=1024,
-                                 pad_begin=True,
-                                 hop_length=128, input_shape=(SAMPLE_RATE, 1),
-                                 sample_rate=SAMPLE_RATE, n_mels=80,
-                                 mel_f_min=40.0, mel_f_max=SAMPLE_RATE/2,
-                                 return_decibel=True,
-                                 name='mel_stft')(x)
+    x = ExpandDimension()(x)
 
     x = Conv2D(64,
                strides=(1, 3),
@@ -130,3 +128,8 @@ def get_model_tcn(input_shape, number_of_classes):
                   metrics=['accuracy'],
                   loss='sparse_categorical_crossentropy')
     return model
+
+
+models = {
+    'cnn_trad_fpool3': cnn_trad_fpool3
+}
