@@ -4,72 +4,69 @@ from tcn import TCN
 from tensorflow.keras import Model
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.layers import (Activation, AveragePooling2D,
-                                            BatchNormalization, Conv2D, Dense,
-                                            Dropout, Flatten, Input, Lambda,
+                                            BatchNormalization, Bidirectional,
+                                            Conv2D, Dense, Dot, Dropout,
+                                            Flatten, Input, Lambda,
+                                            LayerNormalization, ReLU, Softmax,
                                             SpatialDropout2D)
 from tensorflow.python.ops import math_ops
 
 from keyword_spotting.data import SAMPLE_RATE
 
 
-class Sum1(tf.keras.constraints.Constraint):
-    """Constrains the weights incident to each hidden unit to have unit norm.
-    Arguments:
-      axis: integer, axis along which to calculate weight norms.
-          For instance, in a `Dense` layer the weight matrix
-          has shape `(input_dim, output_dim)`,
-          set `axis` to `0` to constrain each weight vector
-          of length `(input_dim,)`.
-          In a `Conv2D` layer with `data_format="channels_last"`,
-          the weight tensor has shape
-          `(rows, cols, input_depth, output_depth)`,
-          set `axis` to `[0, 1, 2]`
-          to constrain the weights of each filter tensor of size
-          `(rows, cols, input_depth)`.
-     """
-
-    def __init__(self, axis=0):
-        self.axis = axis
-
-    def __call__(self, w):
-        return w / (
-            K.epsilon() +
-            math_ops.reduce_sum(w, axis=self.axis, keepdims=True))
-
-    def get_config(self):
-        return {'axis': self.axis}
+def ExpandDimension():
+    return Lambda(lambda x: K.expand_dims(x))
 
 
-class DNNModel:
-    def __init__(self, input_shape, number_of_classes):
-        self.build_model(input_shape, number_of_classes)
+def cnn_rnn_attention(input_shape, number_of_classes):
+    """
+    Convolutional Neural Networks for Small-footprint Keyword Spotting
+    Tara N. Sainath, Carolina Parada
+    """
+    input = Input(shape=input_shape)
+    x = input
+    x = LayerNormalization(axis=0)(x)
 
-    def build_model(self, input_shape, number_of_classes):
-        pass
+    # note that Melspectrogram puts the sequence in shape (batch_size, melDim, timeSteps, 1)
+    # we would rather have it the other way around for LSTMs
 
-    def description(self):
-        pass
+    x = ExpandDimension()(x)
 
+    x = Conv2D(10, (5, 1), activation='relu', padding='same')(x)
+    x = BatchNormalization()(x)
+    x = Conv2D(1, (5, 1), activation='relu', padding='same')(x)
+    x = BatchNormalization()(x)
 
-def get_model(input_shape, number_of_classes):
-    model = tf.keras.models.Sequential([
-        tf.keras.layers.Flatten(input_shape=input_shape),
-        tf.keras.layers.Dense(128, activation='relu'),
-        tf.keras.layers.Dense(128, activation='relu'),
-        tf.keras.layers.Dense(128, activation='relu'),
-        tf.keras.layers.Dense(128, activation='relu'),
-        tf.keras.layers.Dense(number_of_classes, activation='softmax')
-    ])
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001)
+    # x = Reshape((125, 80)) (x)
+    # keras.backend.squeeze(x, axis)
+    x = Lambda(lambda q: K.squeeze(q, -1), name='squeeze_last_dim')(x)
 
+    x = Bidirectional(ReLU(64, return_sequences=True)
+                      )(x)  # [b_s, seq_len, vec_dim]
+    x = Bidirectional(ReLU(64, return_sequences=True)
+                      )(x)  # [b_s, seq_len, vec_dim]
+
+    xFirst = Lambda(lambda q: q[:, -1])(x)  # [b_s, vec_dim]
+    query = Dense(128)(xFirst)
+
+    # dot product attention
+    attScores = Dot(axes=[1, 2])([query, x])
+    attScores = Softmax(name='attSoftmax')(attScores)  # [b_s, seq_len]
+
+    # rescale sequence
+    attVector = Dot(axes=[1, 1])([attScores, x])  # [b_s, vec_dim]
+
+    x = Dense(64, activation='relu')(attVector)
+    x = Dense(32)(x)
+
+    output = Dense(number_of_classes, activation='softmax', name='output')(x)
+
+    model = Model(inputs=[input], outputs=[output])
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
     model.compile(optimizer=optimizer,
                   metrics=['accuracy'],
                   loss='sparse_categorical_crossentropy')
     return model
-
-
-def ExpandDimension():
-    return Lambda(lambda x: K.expand_dims(x))
 
 
 def cnn_trad_fpool3(input_shape, number_of_classes):
@@ -114,22 +111,7 @@ def cnn_trad_fpool3(input_shape, number_of_classes):
     return model
 
 
-def get_model_tcn(input_shape, number_of_classes):
-    input = Input(shape=input_shape)
-    x = input
-    x = TCN(32, use_skip_connections=True,
-            dropout_rate=0.3, use_batch_norm=True)(x)
-    x = Dense(128, activation='relu')(x)
-    x = Dense(number_of_classes, activation='softmax')(x)
-    model = Model(inputs=[input], outputs=[x])
-    optimizer = tf.keras.optimizers.Adam(
-        learning_rate=0.0001,  clipnorm=0.001, clipvalue=0.001)
-    model.compile(optimizer=optimizer,
-                  metrics=['accuracy'],
-                  loss='sparse_categorical_crossentropy')
-    return model
-
-
 models = {
-    'cnn_trad_fpool3': cnn_trad_fpool3
+    'cnn_trad_fpool3': cnn_trad_fpool3,
+    'cnn_rnn_attention': cnn_rnn_attention
 }
