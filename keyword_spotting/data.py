@@ -251,13 +251,16 @@ class TransformedDataset:
             )
             return data, parsed['target']
         dataset = tf.data.TFRecordDataset(
-            str(self.path / f'output_{what}{self.suffix}'))
+            str(self.path / f'output_{what}{self.suffix}'),
+            num_parallel_reads=4)
         return dataset.map(_parse_data)
 
     def get_sequences(self, batch_size: int = 32):
 
         return (
-            self.generate_dataset('train').batch(batch_size),
+            (self.generate_dataset('train')
+             .shuffle(1000,  reshuffle_each_iteration=True).
+                batch(batch_size).prefetch(100000)),
             self.generate_dataset('validation').batch(batch_size),
             self.generate_dataset('test').batch(batch_size),
         )

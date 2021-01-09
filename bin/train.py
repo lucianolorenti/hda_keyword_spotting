@@ -15,7 +15,7 @@ from keyword_spotting.model import models
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('train')
 
-
+mlflow.set_tracking_uri("sqlite:////home/lucianolorenti/mlruns.db")
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train')
     parser.add_argument('--config',
@@ -32,8 +32,10 @@ if __name__ == '__main__':
     dataset = TransformedDataset(
         Path(config['dataset']['path']).resolve(), suffix='basic')
     current_run = mlflow.start_run()
-    mlflow.log_param("train", config['train'])
-    mlflow.log_param("model", config['model'])
+    for k in config['train'].keys():
+        mlflow.log_param(f"train_{k}", config['train'][k])
+    for k in config['model'].keys():
+        mlflow.log_param(f"model_{k}", config['model'][k])
 
     timestampStr = time.strftime("%Y%m%d_%H%M%S")
 
@@ -46,12 +48,13 @@ if __name__ == '__main__':
     train_data, val_data, test_data = dataset.get_sequences(
         batch_size=batch_size)
 
-    model = models['cnn_trad_fpool3'](dataset.shape, dataset.number_of_classes)
+    model = models[config['model']['name']](
+        dataset.shape, dataset.number_of_classes)
     model.summary()
     epochs = config['train']['epochs']
 
     model_path = Path(config['model']['path']).resolve()
-    model_filename = model_path / '{model_id}.hf5'
+    model_filename = model_path / f'{model_id}.hf5'
 
     early_stopping = tf.keras.callbacks.EarlyStopping(patience=10)
     check_point = tf.keras.callbacks.ModelCheckpoint(model_filename)
@@ -70,9 +73,10 @@ if __name__ == '__main__':
 
     mlflow.log_artifact(model_filename)
 
+    logger.debug('Predict test data')
     predicted = model.predict(test_data)
 
-    predicted_path = model_path / '{model_id}_predictions.pkl'
+    predicted_path = model_path / f'{model_id}_predictions.pkl'
     with open(predicted_path, 'wb') as file:
         pickle.dump(predicted, file)
 
