@@ -31,6 +31,22 @@ def _int64_feature(value):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
 
+def shapes(dataset, files: list, left: int = 23, right: int = 8):
+
+    output = []
+    for name in tqdm(files):
+        name = dataset.full_path(name)
+        file_path_parts = name.parts
+        data = extract_features(name)
+        output.append(
+            (name,
+                len(range(left, data.shape[0]-right)),
+             _int64_feature(dataset.get_class(file_path_parts[-2])))
+        )
+
+    return output
+
+
 class FeatureExtractor:
     def __init__(self, dataset: Dataset, output_path: Union[str, Path], suffix: str = '', left: int = 23, right: int = 8):
         self.dataset = dataset

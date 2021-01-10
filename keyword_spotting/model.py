@@ -5,7 +5,7 @@ from tensorflow.keras import Model
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.layers import (Activation, AveragePooling2D,
                                             BatchNormalization, Bidirectional,
-                                            Conv2D, Dense, Dot, Dropout,
+                                            Concatenate, Conv2D, Dense, Dot,
                                             Flatten, Input, Lambda,
                                             LayerNormalization, ReLU, Softmax,
                                             SpatialDropout2D)
@@ -62,6 +62,60 @@ def cnn_rnn_attention(input_shape, number_of_classes):
     output = Dense(number_of_classes, activation='softmax', name='output')(x)
 
     model = Model(inputs=[input], outputs=[output])
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    model.compile(optimizer=optimizer,
+                  metrics=['accuracy'],
+                  loss='sparse_categorical_crossentropy')
+    return model
+
+
+def cnn_inception(input_shape, number_of_classes):
+    """
+    Convolutional Neural Networks for Small-footprint Keyword Spotting
+    Tara N. Sainath, Carolina Parada
+    """
+    input = Input(shape=input_shape)
+    x = input
+    x = ExpandDimension()(x)
+
+    x1 = Conv2D(16,
+                strides=(1, 3),
+                kernel_size=(20, 8),
+                padding='same',
+                use_bias=False)(x)
+
+    x2 = Conv2D(16,
+                strides=(1, 3),
+                kernel_size=(20, 8),
+                padding='same',
+                use_bias=False)(x)
+
+    x3 = Conv2D(16,
+                strides=(1, 3),
+                kernel_size=(20, 8),
+                padding='same',
+                use_bias=False)(x)
+    x = Concatenate()([x1, x2, x3])
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+    x = Conv2D(64,
+               strides=(1, 1),
+               kernel_size=(10, 4),
+               padding='same',
+               use_bias=False)(x)
+
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+    x = SpatialDropout2D(0.3)(x)
+
+    x = Flatten()(x)
+    x = Dense(32)(x)
+    x = BatchNormalization()(x)
+    x = Dense(128)(x)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+    x = Dense(number_of_classes, activation='softmax')(x)
+    model = Model(inputs=[input], outputs=[x])
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
     model.compile(optimizer=optimizer,
                   metrics=['accuracy'],
