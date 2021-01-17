@@ -4,7 +4,7 @@ dataset:
 
 model:
   path: /home/lucianolorenti/models
-  name: 'cnn_inception'
+  name: 'cnn_inception2'
   params:
     n_filters: 22
     sizes: [10, 20, 30]
