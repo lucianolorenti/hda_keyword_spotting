@@ -48,8 +48,9 @@ if __name__ == '__main__':
     train_data, val_data, test_data = dataset.get_sequences(
         batch_size=batch_size)
 
+    params = config['model'].get('params', {})
     model = models[config['model']['name']](
-        dataset.shape, dataset.number_of_classes)
+        dataset.shape, dataset.number_of_classes, **params)
     model.summary()
     epochs = config['train']['epochs']
 

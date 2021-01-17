@@ -176,7 +176,7 @@ def simple_tcn(input_shape, number_of_classes):
     return model
 
 
-def cnn_inception(input_shape, number_of_classes):
+def cnn_inception(input_shape, number_of_classes, n_filters=16, sizes=[5, 10, 15]):
     """
     Convolutional Neural Networks for Small-footprint Keyword Spotting
     Tara N. Sainath, Carolina Parada
@@ -185,26 +185,34 @@ def cnn_inception(input_shape, number_of_classes):
     x = input
     x = ExpandDimension()(x)
 
-    x1 = Conv2D(16,
+    x1 = Conv2D(n_filters,
                 strides=(1, 3),
-                kernel_size=(10, 8),
+                kernel_size=(sizes[0], 16),
                 padding='same',
+                activation='relu',
                 use_bias=False)(x)
 
-    x2 = Conv2D(16,
+    x2 = Conv2D(n_filters,
                 strides=(1, 3),
-                kernel_size=(20, 8),
+                kernel_size=(sizes[1], 8),
                 padding='same',
+                activation='relu',
                 use_bias=False)(x)
 
-    x3 = Conv2D(16,
+    x3 = Conv2D(n_filters,
                 strides=(1, 3),
-                kernel_size=(30, 8),
+                kernel_size=(sizes[2], 4),
                 padding='same',
+                activation='relu',
                 use_bias=False)(x)
     x = Concatenate()([x1, x2, x3])
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
+
+    x = Conv2D(64,
+               strides=(1, 1),
+               kernel_size=(10, 4),
+               padding='same',
+               use_bias=False)(x)
+
     x = Conv2D(64,
                strides=(1, 1),
                kernel_size=(10, 4),
@@ -213,7 +221,6 @@ def cnn_inception(input_shape, number_of_classes):
 
     x = BatchNormalization()(x)
     x = Activation('relu')(x)
-    x = SpatialDropout2D(0.3)(x)
 
     x = Flatten()(x)
     x = Dense(32)(x)
@@ -223,7 +230,78 @@ def cnn_inception(input_shape, number_of_classes):
     x = Activation('relu')(x)
     x = Dense(number_of_classes, activation='softmax')(x)
     model = Model(inputs=[input], outputs=[x])
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    #optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    optimizer = tf.keras.optimizers.RMSprop(learning_rate=0.001)
+    model.compile(optimizer=optimizer,
+                  metrics=['accuracy'],
+                  loss='sparse_categorical_crossentropy')
+    return model
+
+
+def cnn_inception2(input_shape, number_of_classes, n_filters=16, sizes=[5, 10, 15]):
+    """
+    Convolutional Neural Networks for Small-footprint Keyword Spotting
+    Tara N. Sainath, Carolina Parada
+    """
+    input = Input(shape=input_shape)
+    x = input
+    x = ExpandDimension()(x)
+
+    x1 = Conv2D(n_filters,
+                strides=(1, 3),
+                kernel_size=(sizes[0], 16),
+                padding='same',
+                activation='relu',
+                use_bias=False)(x)
+
+    x2 = Conv2D(n_filters,
+                strides=(1, 3),
+                kernel_size=(sizes[1], 8),
+                padding='same',
+                activation='relu',
+                use_bias=False)(x)
+
+    x3 = Conv2D(n_filters,
+                strides=(1, 3),
+                kernel_size=(sizes[2], 4),
+                padding='same',
+                activation='relu',
+                use_bias=False)(x)
+    x = Concatenate()([x1, x2, x3])
+
+    x1 = Conv2D(n_filters,
+                strides=(1, 1),
+                kernel_size=(5, 4),
+                padding='same',
+                activation='relu',
+                use_bias=False)(x)
+
+    x2 = Conv2D(n_filters,
+                strides=(1, 1),
+                kernel_size=(10, 4),
+                padding='same',
+                activation='relu',
+                use_bias=False)(x)
+
+    x3 = Conv2D(n_filters,
+                strides=(1, 1),
+                kernel_size=(15, 4),
+                padding='same',
+                activation='relu',
+                use_bias=False)(x)
+
+    x = Concatenate()([x1, x2, x3])
+
+    x = Flatten()(x)
+    x = Dense(32)(x)
+    x = BatchNormalization()(x)
+    x = Dense(128)(x)
+    x = BatchNormalization()(x)
+    x = Activation('relu')(x)
+    x = Dense(number_of_classes, activation='softmax')(x)
+    model = Model(inputs=[input], outputs=[x])
+    #optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    optimizer = tf.keras.optimizers.RMSprop(learning_rate=0.001)
     model.compile(optimizer=optimizer,
                   metrics=['accuracy'],
                   loss='sparse_categorical_crossentropy')
@@ -276,5 +354,6 @@ models = {
     'simple_tcn': simple_tcn,
     'cnn_attention': cnn_attention,
     'cnn_residual': cnn_residual,
-    'cnn_inception': cnn_inception
+    'cnn_inception': cnn_inception,
+    'cnn_inception2': cnn_inception2
 }
