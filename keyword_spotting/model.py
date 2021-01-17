@@ -61,7 +61,7 @@ def cnn_residual2(input_shape,  number_of_classes, n_residuals=3):
 
         x = Add()([x, identity])
 
-    x = Conv2D(64,
+    x = Conv2D(45,
                strides=(1, 1),
                kernel_size=(3, 3),
                padding='same',
@@ -69,7 +69,7 @@ def cnn_residual2(input_shape,  number_of_classes, n_residuals=3):
     x = Activation('relu')(x)
     x = BatchNormalization()(x)
     x = AveragePooling2D()(x)
-
+    x = Flatten()(x)
     output = Dense(number_of_classes, activation='softmax', name='output')(x)
 
     model = Model(inputs=[input], outputs=[output])

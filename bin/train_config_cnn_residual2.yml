@@ -6,7 +6,7 @@ model:
   path: /home/lucianolorenti/models
   name: 'cnn_residual2'
   params:
-    n_residuaks: 3
+    n_residuals: 3
     
 
 train:
