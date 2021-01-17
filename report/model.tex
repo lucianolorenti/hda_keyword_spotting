@@ -2,63 +2,37 @@
 
 \section{Processing Pipeline}
 \label{sec:processing_architecture}
+ Conceptually, our system consistsof three components.   First,  in the feature extraction module,40 dimensional log-mel filterbank features are computed every25ms with a 10ms frame shift.  Next, at every frame, we stack23 frames to the left and 8 frames to the right, and input thisinto the DNN
+ 
+ 
+CNN is an image classification technique and one of the major challenges in speech and acoustic event recognition has been how to best represent the audio signal using an image for this purpose. Two common approaches have been seen in addressing this problem. Firstly, the audio signal is converted to spectrogram images \cite{zhang2015robust}. Secondly, a mel-filter, as used in computing mel-frequency cepstral coefficients (MFCC), is used to form an image-like representation \cite{abdel2014convolutional]}.  To ensure that all images are of an equal size, the audio signal is divided into a fixed number of frames \cite{We refer this as the mel-spectrogram.}.
 
-\begin{remark}
-\textbf{On tailoring the paper structure to your needs:} The structure recommended for the previous sections is rather standard and could work for different papers with differing technical content, the structure and the paper content from here on highly depends on the type of paper, possibilities are: mostly based on theoretical analysis, showing experimental design/activity, proposing a new technique and analyzing its performance via experiments or simulation. For the HDA course we deal with machine learning and, in detail, with training and testing neural network architectures to perform some specific inference or classification task. The following structure and comments are specifically addressing this type of technical content.
-\end{remark}
 
-\begin{remark}
-\textbf{Why having this section:} With this section, we start the technical description with a {\it high level} introduction of your work (e.g., processing pipeline). Here, you do not have to necessarily go into the technical details of every block/algorithm of your design, this will be done later as the paper develops. What I would like to see here is a high level description of the approach, i.e., which processing blocks you used, what they do (in words) and how these were combined, etc. This section should introduce the reader to your design, explain the different parts/blocks, how they interact and why. You should not delve into technical details for each block, but you should rather explain the big picture. \MR{Besides a well written explanation, I often use a nice diagram containing the various blocks and detailing their interrelations.}
-\end{remark} 
+CNNs run a small window over the input image atboth training and testing time, so that the weights of the networkthat looks through this window canlearn from various featuresof the input data regardless of their absolute position within theinput.Weight sharing, or to be more precise in our present situ-ation,full weight sharingrefers to the decision to use the sameweights at every positioning of the window. CNNs are also often said to be local because the individual units that are computed at a particular positioning ofthe window depend upon featuresof the local region of the image that the window currently looksupon.
+ Time presents no immediate problem from the standpoint of locality. Likeother DNNs for speech, a single window of input to the CNNwill consist of a wide amount of context (9–15 frames). Asfor frequency, the conventional use of MFCCs does present amajor problem because the discrete cosine transform projectsthe spectral energies into a new basis that may not maintain lo-cality. In this paper, we shall use the log-energy computed di-rectly from the mel-frequency spectral coefficients (i.e., with noDCT), which we will denote asMFSC features. These will beused to represent each speech frame in order to describethe acoustic energy distributionin each of several different frequency bands
 
-\noindent \textbf{Writing tips:} Sections, Figures and Tables are usually shortened as Sec., Fig., Tab. 
-\begin{itemize}
-\item \textbf{Cross referencing:} In Latex, cross referencing is easy. You need to label an object through the \texttt{\textbackslash label\{labelid\}} command and referencing it where you need it through the \texttt{\textbackslash ref\{labelid\}} command. 
-\item \textbf{Suggestion:} I suggest to cross reference a table using \texttt{Tab.\mytexttilde\textbackslash ref\{tab:tableid\}}, the same holds for figures and sections, by just replacing ``\texttt{Tab.}'' with ``\texttt{Fig.}'' and ``\texttt{Sec.}''. Of course when defining the table, you need to add a Latex command \texttt{\textbackslash label\{tab:tableid\}} in the right place inside the table Latex environment to \mbox{cross-link} it. The tag \texttt{tab:tableid} is user defined and is the identifier that you associate with the table in question. You could call it \texttt{pippo} of you wish, but I recommend to use something like ``\texttt{tab:tableid}'' for tables, ``\texttt{eq:eqid}'' for equations, ``\texttt{sec:secid}'' for sections and so forth, where \texttt{tableid} has to be unique for each table in the document. The same applies to figures and all other objects. I guess you got the idea. This will lead to a neat Latex code and will facilitate cross referencing while avoiding duplicate labels, especially in large Latex documents (think of a book for example). 
-\item \textbf{But what about the tilde?} This is a nice trick I have learned from a friend (many years ago from Prof. Frank Fitzek, now at TU Dresden). When you write \texttt{Tab.\mytexttilde\textbackslash ref\{tab:tableid\}} Latex knows that \texttt{Tab.} and the corresponding table number \texttt{\textbackslash ref\{tab:tableid\}} must be displayed within the same line, i.e., they can never be broken across lines. This is nice and desirable I believe. I always use it for all referenced material, including citations; example: ``As done in\texttt{\mytexttilde\textbackslash cite\{suppa-wu-2019\}}.''
-\item \textbf{More about breaking stuff across lines} often times you have composed words, in line equations, etc. and for some reason you would like Latex to never break them across lines. Example: the Latex command \texttt{\textbackslash mbox\{Neural Networks (NN)\}} is processed by Latex so that ``\mbox{Neural Networks (NN)}'' is never broken across lines. I use this very often, also for inline equations that I do not want Latex to split across subsequent lines.
-\end{itemize}
+There exist several different alternatives to organizing theseMFSC features into maps for the CNN. First, as shown inFig. 1(b), they can be arranged as three 2-D feature maps,each of which represents MFSC features (static, delta anddelta-delta) distributed along both frequency (using the fre-quency band index) and time (using the frame number withineach context window). In this case, a two-dimensional con-volution is performed (explained below) to normalize bothfrequency and temporal variations simultaneously. 
+
+
+We evaluated our models using Google’s Speech CommandsDataset  [9],  which  was  released  in  August  2017  under  aCreative  Commons  license.2The  dataset  contains  65,000one-second long utterances of 30 short words by thousands ofdifferent people, as well as background noise samples such aspink noise, white noise, and human-made sounds.  The blogpost  announcing  the  data  release  also  references  Google’sTensorFlow implementation of Sainath and Parada’s models,which provide the basis of our comparisons
+
+
+The output of each must be post-processed
 
 \section{Signals and Features}
-\label{sec:model}
+For  feature  extraction,   we  first  apply  a  band-pass  filterof  20Hz/4kHz  to  the  input  audio  to  reduce  noise.    Forty-dimensional  Mel-Frequency  Cepstrum  Coefficient  (MFCC)frames are then constructed and stacked using a 30ms win-dow and a 10ms frame shift.  All frames are stacked across a1s interval to form the two-dimensional input to our models.
+For the speech regions, we generate acoustic features based on40-dimensional log-filterbank energies computed every 10 ms overa window of 25 ms. Contiguous frames are stacked to add sufficientleft and right context. The input window is asymmetric since eachadditional frame of future context adds 10 ms of latency to the sys-tem. For our Deep KWS system, we use 10 future frames and 30frames in the past.
+A  block  diagram  of  the  DNN  KWS  system  [2]  used  in  thiswork is shown in Figure 1. 
 
-Being a machine learning paper, I would have here a section describing the signals you have been working on. If possible, you should describe, in order, 
-\begin{enumerate}
-\item the measurement setup (if relevant), how input data is formatted (e.g., vectors of fixed size measured at regular sampling times), 
-\item how the signals were \mbox{pre-processed}, e.g., to remove noise, artifacts, fill gaps (missing points) or to re-interpolate the signals to represent them through a constant sampling rate, etc.
-\item after this, you should describe how {\it feature vectors} were obtained from the \mbox{pre-processed} signals. If signals are {\it time series} this also implies stating the segmentation / windowing strategy that you adopted, to then describe how you obtained a feature vector for each time window. Also, if you use existing feature extraction approaches, you may want to briefly describe them as well, in addition to (and before) your own (possibly new) feature extraction method.
-\end{enumerate}
 
-\MR{Last but not least, this section should also contain information on how you have split the dataset into training, validation and test sets. This will be briefly recalled within the ``Results'' section.}
+
+
+In this work, we focus on convolutional neural networks(CNNs), a class of models that has been successfully appliedto small-footprint keyword spotting in recent years.  In par-ticular, we explore the use of residual learning techniques anddilated convolutions. On the recently-released Google SpeechCommands  Dataset,  which  provides  a  common  benchmarkfor keyword spotting, our full residual network model outper-forms Google’s previously-best CNN [1] (95.8% vs. 91.7% inaccuracy).  We can tune the depth and width of our networksto target a desired tradeoff between model footprint and ac-curacy: one variant is able to achieve accuracy only slightlybelow Google’s best CNN with a 50×reduction in model pa-rameters and an 18×reduction in the number of multipliesin a feedforward inference pass.  This model far outperformsprevious compact CNN variants
+
 
 \section{Learning Framework}
-\label{sec:learning_framework}
+The model presented in \cite{sainath2015convolutional} is a CNN architecture that address the constraints of each applications. We find that theCNN architectures offer between a 27-44% relative improve-ment in false reject rate compared to a DNN, while fitting intothe constraints of each application
 
-Here you finally describe the learning strategy / algorithm that you conceived and used to solve the problem at stake. A good diagram to exemplify how learning is carried out is often very useful. In this section, you should describe the learning model, its parameters, any optimization over a given parameter set, etc. You can organize this section into \mbox{sub-sections}. You are free to choose the most appropriate structure.
-
-\begin{remark}
-Note that the diagram that you put here differs from that of Section~\ref{sec:processing_architecture} as here you show the details of how your learning framework, or the core of it, is built. In Section~\ref{sec:processing_architecture} you instead provide a high-level description of the involved processing blocks, i.e., you describe the {\it processing flow} and the rationale behind it.
-\end{remark}
-
-\noindent \textbf{On math typesetting:} there are many Latex tricks that you should use to produce a high quality technical essay. A few are listed below, in random order:
-\begin{itemize}
-\item \textbf{Vectors and matrices:} $x$ is a scalar, whereas $\bm{x}$ (in bold) is a vector, and $\bm{X}$ is a matrix with elements $\bm{X} = [x_{ij}]$. For bold symbols you may use the \texttt{\textbackslash bm} Latex command, e.g., \texttt{\textbackslash bm(x)}.
-\item \textbf{Operators:} such as $\max$, $\min$, $\arg\!\max$, $\arg\!\min$ and special functions such as $\log(\cdot)$, $\exp(\cdot)$, $\sin(\cdot)$, $\cos(\cdot)$ are obtained through specific latex commands \texttt{\textbackslash min}, \texttt{\textbackslash max}, \texttt{\textbackslash arg\textbackslash!min}, \texttt{\textbackslash arg\textbackslash!max}, \texttt{\textbackslash log}, \texttt{\textbackslash exp}, \texttt{\textbackslash sin}, \texttt{\textbackslash cos}, etc. Use them! $log$, $exp$, $min$, $sin$, $cos$, etc., look ugly.
-\item \textbf{Sets} can be represented through calligraphic fonts, e.g., $\mathcal{S}$, $\mathcal{F}$, $\mathcal{B}$, etc., obtained using the Latex command \texttt{\textbackslash mathcal{\{S\}}}, etc.
-\item \textbf{Equations:} for a single equation use the \texttt{equation} Latex environment. Example: 
-\begin{equation}
-\label{eq:sigmoid}
-\sigma(x) = \frac{1}{1+e^{-x}}.
-\end{equation} 
-Now, using round brackets $($ and $)$ we get
-\begin{equation}
-\label{eq:sigmoid_comma}
-\sigma(x) = (\frac{1}{1+e^{-x}}),
-\end{equation} 
-but this looks ugly, you should use ``\texttt{\textbackslash left (}'' for ``$($'' and ``\texttt{\textbackslash right )}'' for ``$)$'', obtaining
-\begin{equation}
-\sigma(x) = \left ( \frac{1}{1+e^{-x}} \right ).
-\end{equation} 
-\item \textbf{Punctuation:} Displayed equations are usually considered to be part of the text and, in turn, they will get the very same punctuation as if they were inline with the text (and part of the sentence). If the sentence ends with a displayed equation, the equation gets a period ``.'' right after it, see Eq.~(\ref{eq:sigmoid}). iI the equation is instead part of a running sentence, which is continued after it, then the equation may be ended by a ``,'' as in Eq.~(\ref{eq:sigmoid_comma}). Use the standard grammar rules and your good sense of flow to assess how equations should be punctuated, I usually read through as if they were plain text.
-\end{itemize} 
-
+\subsection{Residual layers}
+\subsection{Attention layers}
+\subsection{Inception-like layers}

@@ -19,6 +19,67 @@ def ExpandDimension():
     return Lambda(lambda x: K.expand_dims(x))
 
 
+def cnn_residual2(input_shape,  number_of_classes, n_residuals=3):
+    """
+    Convolutional Neural Networks for Small-footprint Keyword Spotting
+    Tara N. Sainath, Carolina Parada
+    """
+    input = Input(shape=input_shape)
+    x = input
+    x = LayerNormalization(axis=1)(x)
+
+    # note that Melspectrogram puts the sequence in shape (batch_size, melDim, timeSteps, 1)
+    # we would rather have it the other way around for LSTMs
+
+    x = ExpandDimension()(x)
+    identity = x
+    identity = Conv2D(45,
+                      strides=(1, 1),
+                      kernel_size=(3, 3),
+                      padding='same',
+                      use_bias=False)(x)
+    i = 0
+    for j in range(n_residuals):
+        i += 1
+        x = Conv2D(45,
+                   strides=(1, 1),
+                   kernel_size=(3, 3),
+                   dilation_rate=int(2**(i // 3)),
+                   padding='same',
+                   use_bias=False)(x)
+        x = Activation('relu')(x)
+        x = BatchNormalization()(x)
+        i = 2
+        x = Conv2D(45,
+                   strides=(1, 1),
+                   kernel_size=(3, 3),
+                   dilation_rate=int(2**(i // 3)),
+                   padding='same',
+                   use_bias=False)(x)
+        x = Activation('relu')(x)
+        x = BatchNormalization()(x)
+
+        x = Add()([x, identity])
+
+    x = Conv2D(64,
+               strides=(1, 1),
+               kernel_size=(3, 3),
+               padding='same',
+               use_bias=True)(x)
+    x = Activation('relu')(x)
+    x = BatchNormalization()(x)
+    x = AveragePooling2D()(x)
+
+    output = Dense(number_of_classes, activation='softmax', name='output')(x)
+
+    model = Model(inputs=[input], outputs=[output])
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    model.compile(optimizer=optimizer,
+                  metrics=['accuracy'],
+                  loss='sparse_categorical_crossentropy')
+    return model
+
+
 def cnn_residual(input_shape, number_of_classes):
     """
     Convolutional Neural Networks for Small-footprint Keyword Spotting
@@ -276,5 +337,6 @@ models = {
     'simple_tcn': simple_tcn,
     'cnn_attention': cnn_attention,
     'cnn_residual': cnn_residual,
-    'cnn_inception': cnn_inception
+    'cnn_inception': cnn_inception,
+    'cnn_residual2': cnn_residual2
 }
