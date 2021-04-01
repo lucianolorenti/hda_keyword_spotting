@@ -15,7 +15,7 @@ from keyword_spotting.model import models
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('train')
 
-mlflow.set_tracking_uri("sqlite:////home/lucianolorenti/mlruns.db")
+mlflow.set_tracking_uri("sqlite:////home/luciano/mlruns.db")
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train')
     parser.add_argument('--config',

@@ -259,8 +259,8 @@ class TransformedDataset:
 
         return (
             (self.generate_dataset('train')
-             .shuffle(1000,  reshuffle_each_iteration=True).
-                batch(batch_size).prefetch(100000)),
+             .shuffle(100,  reshuffle_each_iteration=True).
+                batch(batch_size).prefetch(1000)),
             self.generate_dataset('validation').batch(batch_size),
             self.generate_dataset('test').batch(batch_size),
         )

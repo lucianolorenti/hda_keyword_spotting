@@ -2,10 +2,15 @@
 
 \section{Processing Pipeline}
 \label{sec:processing_architecture}
- Conceptually, our system consistsof three components.   First,  in the feature extraction module,40 dimensional log-mel filterbank features are computed every25ms with a 10ms frame shift.  Next, at every frame, we stack23 frames to the left and 8 frames to the right, and input thisinto the DNN
+\begin{figure}
+\caption{Schematic}
+\label{system_scheme}
+\end{figure}
+
+In a general way, the system used consists on the main components. An scheme of the system is shown on figure \ref{system_scheme}.  CNN is an image classification technique and one of the major challenges in speech and acoustic event recognition has been how to best represent the audio signal using an image for this purpose. Two common approaches have been seen in addressing this problem. Firstly, the audio signal is converted to spectrogram images \cite{zhang2015robust}. Secondly, a mel-filter, as used in computing mel-frequency cepstral coefficients (MFCC), is used to form an image-like representation \cite{abdel2014convolutional]}.  To ensure that all images are of an equal size, the audio signal is divided into a fixed number of frames \cite{We refer this as the mel-spectrogram.}. The first component consist on a feature extraction module  from the audio signals. The second module consists on the convolutional neural network architecture. This model will output a probability of each segment to belong to a class. Finally, a post-processing module, takes for each audio input the list of probabiltiies, and produces the final predicted class for that audio.
+
  
- 
-CNN is an image classification technique and one of the major challenges in speech and acoustic event recognition has been how to best represent the audio signal using an image for this purpose. Two common approaches have been seen in addressing this problem. Firstly, the audio signal is converted to spectrogram images \cite{zhang2015robust}. Secondly, a mel-filter, as used in computing mel-frequency cepstral coefficients (MFCC), is used to form an image-like representation \cite{abdel2014convolutional]}.  To ensure that all images are of an equal size, the audio signal is divided into a fixed number of frames \cite{We refer this as the mel-spectrogram.}.
+
 
 
 CNNs run a small window over the input image atboth training and testing time, so that the weights of the networkthat looks through this window canlearn from various featuresof the input data regardless of their absolute position within theinput.Weight sharing, or to be more precise in our present situ-ation,full weight sharingrefers to the decision to use the sameweights at every positioning of the window. CNNs are also often said to be local because the individual units that are computed at a particular positioning ofthe window depend upon featuresof the local region of the image that the window currently looksupon.
@@ -20,19 +25,17 @@ We evaluated our models using Google’s Speech CommandsDataset  [9],  which  wa
 The output of each must be post-processed
 
 \section{Signals and Features}
-For  feature  extraction,   we  first  apply  a  band-pass  filterof  20Hz/4kHz  to  the  input  audio  to  reduce  noise.    Forty-dimensional  Mel-Frequency  Cepstrum  Coefficient  (MFCC)frames are then constructed and stacked using a 30ms win-dow and a 10ms frame shift.  All frames are stacked across a1s interval to form the two-dimensional input to our models.
-For the speech regions, we generate acoustic features based on40-dimensional log-filterbank energies computed every 10 ms overa window of 25 ms. Contiguous frames are stacked to add sufficientleft and right context. The input window is asymmetric since eachadditional frame of future context adds 10 ms of latency to the sys-tem. For our Deep KWS system, we use 10 future frames and 30frames in the past.
-A  block  diagram  of  the  DNN  KWS  system  [2]  used  in  thiswork is shown in Figure 1. 
+The audio signals For  feature  extraction,   we  first  apply  a  band-pass  filterof  20Hz/4kHz  to  the  input  audio  to  reduce  noise.    For the speech regions, we generate acoustic features based on40-dimensional log-filterbank energies computed every 10 ms overa window of 25 ms. Contiguous frames are stacked to add sufficientleft and right context. The input window is asymmetric since eachadditional frame of future context adds 10 ms of latency to the sys-tem. For our Deep KWS system, we use 10 future frames and 30frames in the past.
 
-
-
-
-In this work, we focus on convolutional neural networks(CNNs), a class of models that has been successfully appliedto small-footprint keyword spotting in recent years.  In par-ticular, we explore the use of residual learning techniques anddilated convolutions. On the recently-released Google SpeechCommands  Dataset,  which  provides  a  common  benchmarkfor keyword spotting, our full residual network model outper-forms Google’s previously-best CNN [1] (95.8% vs. 91.7% inaccuracy).  We can tune the depth and width of our networksto target a desired tradeoff between model footprint and ac-curacy: one variant is able to achieve accuracy only slightlybelow Google’s best CNN with a 50×reduction in model pa-rameters and an 18×reduction in the number of multipliesin a feedforward inference pass.  This model far outperformsprevious compact CNN variants
 
 
 \section{Learning Framework}
-The model presented in \cite{sainath2015convolutional} is a CNN architecture that address the constraints of each applications. We find that theCNN architectures offer between a 27-44% relative improve-ment in false reject rate compared to a DNN, while fitting intothe constraints of each application
+ models  are  compared  against  three  CNN  variantsproposed by Sainath and Parada\cite{sainath2015convolutional}, named trad-fpool3, which is their base model   The accuracies of these models are shown in Table 4,which  also  shows  the  95%  confidence  intervals  from  fivedifferent optimization trials with different random seeds. Thetable  provides  the  number  of  model  parameters  as  well  asthe number of multiplies in an inference pass.   
+
+
 
 \subsection{Residual layers}
+In par-ticular, we explore the use of residual learning techniques anddilated convolutions.
+
 \subsection{Attention layers}
 \subsection{Inception-like layers}

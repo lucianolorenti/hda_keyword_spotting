@@ -1,9 +1,9 @@
 dataset:
-  path: /home/lucianolorenti/transformed
+  path: /home/luciano/speech3
   name: 'basic'
 
 model:
-  path: /home/lucianolorenti/models
+  path: /home/luciano/models
   name: 'cnn_residual2'
   params:
     n_residuals: 3

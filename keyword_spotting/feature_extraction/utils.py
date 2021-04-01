@@ -24,7 +24,7 @@ def read_wav(file, frame_length=25, frame_stride=10):
     np.array([])
     """
     fs, data = wavfile.read(file)
-    return fs, data
+    return np.int64(fs), np.float32(data)
 
 
 def hamming(frames, frame_length):
@@ -73,7 +73,7 @@ def filter_banks(pow_frames, sample_rate, NFFT, nfilt, num_ceps: int = 12, cep_l
                     nfilt + 2))
     bin = np.floor((NFFT + 1) * hz_points / sample_rate)
 
-    fbank = np.zeros((nfilt, int(np.floor(NFFT / 2 + 1))))
+    fbank = np.zeros((nfilt, int(np.floor(NFFT / 2 + 1))), dtype=np.float32)
 
     for m in range(1, nfilt + 1):
         f_m_minus = int(bin[m - 1])   # left
@@ -103,8 +103,13 @@ def filter_banks(pow_frames, sample_rate, NFFT, nfilt, num_ceps: int = 12, cep_l
     return mfcc
 
 
-def extract_features(file, NFFT=256, nfilt=40):
+def open_extract_features(file, NFFT=256, nfilt=40):
     sample_rate, signal = read_wav(file)
+    return extract_features(sample_rate, signal, NFFT=NFFT, nfilt=nfilt)
+    
+
+
+def extract_features(sample_rate, signal, NFFT=256, nfilt=40):
     frames, frame_length = sliding_window(
         signal, sample_rate)
 
@@ -114,4 +119,4 @@ def extract_features(file, NFFT=256, nfilt=40):
                           NFFT,
                           nfilt)
 
-    return frames
+    return np.float32(frames)
