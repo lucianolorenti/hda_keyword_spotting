@@ -1,12 +1,20 @@
-import tensorflow as tf
+import argparse
+import logging
+import pickle
+import time
+from datetime import datetime
 from pathlib import Path
-from keyword_spotting.feature_extraction.extractor import extract_features as keyword_extract_features
-from keyword_spotting.feature_extraction.utils import read_wav
-from keyword_spotting.model import cnn_inception2
 
+import mlflow
 import numpy as np
 import tensorflow as tf
+import yaml
 from kapre.composed import get_melspectrogram_layer
+from keyword_spotting.data import SAMPLE_RATE, TransformedDataset
+from keyword_spotting.feature_extraction.extractor import \
+    extract_features as keyword_extract_features
+from keyword_spotting.feature_extraction.utils import read_wav
+from keyword_spotting.model import cnn_inception2, models
 from tcn import TCN
 from tensorflow.keras import Model
 from tensorflow.python.keras import backend as K
@@ -18,10 +26,6 @@ from tensorflow.python.keras.layers import (GRU, Activation, Add,
                                             LayerNormalization, Reshape,
                                             Softmax, SpatialDropout2D)
 from tensorflow.python.ops import math_ops
-
-from keyword_spotting.data import SAMPLE_RATE
-
-
 
 noise_files = [
     'doing_the_dishes.wav', 'dude_miaowing.wav', 'exercise_bike.wav',
@@ -86,35 +90,52 @@ def shapeify(x, y):
 
     return x, y
 
-data_path = Path('/home/luciano/speech')
 
-ds = (tf.data.Dataset.list_files('/home/luciano/speech/dd/*/*.wav')
-        #.filter(tf_filter_files)
-        .shuffle(buffer_size=5000)
-        .map(tf_read_wav)
-        .apply(tf.data.experimental.ignore_errors())
-        .map(tf_add_noise)
-        .map(tf_extract_features)        
-        .map(tf_windowed)
-        .flat_map(split_window)
-        .map(shapeify)
-        .prefetch(tf.data.AUTOTUNE)
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Train')
+    parser.add_argument('--config',
+                        type=str,
+                        required=True,
+                        help='Config file')
 
-)
+    args = parser.parse_args()
 
-input_shape = [a[0].shape for a in ds.take(1)][0]
+    config = None
+    with open(args.config, 'r') as file:
+        config = yaml.load(file.read(), Loader=yaml.SafeLoader)
 
-#model = cnn_inception2((input_shape[0], input_shape[1]), 10)
-#model.summary()
-#model.fit(ds, epochs=5)
-input = Input(shape=(input_shape[0], input_shape[1]))
-x = input
-x = Flatten()(x)
-x = Dense(50, activation='relu')(x)
-x = Dense(10, activation='softmax')(x)
-model = Model(inputs=[input], outputs=[x])
-optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-model.compile(optimizer=optimizer,
-                metrics=['accuracy'],
-                loss='sparse_categorical_crossentropy')
-model.fit(ds.batch(64), batch_size=64)
+
+    data_path = config['dataset']['path']
+
+    ds = (tf.data.Dataset.list_files(str(data_path) + '/*/*.wav')
+            #.filter(tf_filter_files)
+            .shuffle(buffer_size=5000)
+            .map(tf_read_wav)
+            .apply(tf.data.experimental.ignore_errors())
+            .map(tf_add_noise)
+            .map(tf_extract_features)        
+            .map(tf_windowed)
+            .flat_map(split_window)
+            .map(shapeify)
+            .prefetch(tf.data.AUTOTUNE)
+    )
+    number_of_classes = len(labels)
+    input_shape = [a[0].shape for a in ds.take(1)][0]
+    params = config['model'].get('params', {})
+    model = models[config['model']['name']](
+        input_shape, number_of_classes, **params)
+    model.summary()
+    epochs = config['train']['epochs']
+
+    model_path = Path(config['model']['path']).resolve()
+
+    #early_stopping = tf.keras.callbacks.EarlyStopping(patience=10)
+    #check_point = tf.keras.callbacks.ModelCheckpoint(model_filename)
+    history = model.fit(ds.batch(64),
+                        epochs=epochs)
+    
+
+    #model = cnn_inception2((input_shape[0], input_shape[1]), 10)
+    #model.summary()
+    #model.fit(ds, epochs=5)
+
