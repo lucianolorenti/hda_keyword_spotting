@@ -7,4 +7,4 @@ model:
   name: 'cnn_trad_fpool3'
 
 dataset:
-  path: /home/luciano/speech3
+  path: /home/luciano/speech_2
