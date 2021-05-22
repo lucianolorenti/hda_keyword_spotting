@@ -1,11 +1,8 @@
 import argparse
-import logging
-import pickle
-import time
-from datetime import datetime
+
 from pathlib import Path
 
-import mlflow
+
 import numpy as np
 import tensorflow as tf
 import yaml
@@ -15,24 +12,15 @@ from keyword_spotting.feature_extraction.extractor import \
     extract_features as keyword_extract_features
 from keyword_spotting.feature_extraction.utils import read_wav
 from keyword_spotting.model import cnn_inception2, models
-from tcn import TCN
-from tensorflow.keras import Model
-from tensorflow.python.keras import backend as K
-from tensorflow.python.keras.layers import (GRU, Activation, Add,
-                                            AveragePooling2D,
-                                            BatchNormalization, Bidirectional,
-                                            Concatenate, Conv2D, Dense, Dot,
-                                            Dropout, Flatten, Input, Lambda,
-                                            LayerNormalization, Reshape,
-                                            Softmax, SpatialDropout2D)
-from tensorflow.python.ops import math_ops
+
+
 
 noise_files = [
     'doing_the_dishes.wav', 'dude_miaowing.wav', 'exercise_bike.wav',
     'pink_noise.wav', 'running_tap.wav', 'white_noise.wav'
 ]
 
-labels = ['down', 'go' ,'left','no','off','on','right','stop','up','yes']
+labels = ['yes','no','up','down','left','right', 'on','off','stop', 'go', 'silence', 'unknown']
 lables_dict = {l:i for i,l in enumerate(labels)}
 
 
