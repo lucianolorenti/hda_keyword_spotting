@@ -1,13 +1,11 @@
 import argparse
 
 from pathlib import Path
-
+import pickle
 import numpy as np
 import tensorflow as tf
 import yaml
-from kapre.composed import get_melspectrogram_layer
-from keyword_spotting.data import SAMPLE_RATE, TransformedDataset
-from keyword_spotting.feature_extraction.extractor import (
+from keyword_spotting.feature_extraction.utils import (
     extract_features as keyword_extract_features,
 )
 from keyword_spotting.feature_extraction.utils import read_wav
@@ -38,15 +36,24 @@ labels = [
     "silence",    
 ]
 
-def generate_file_list(dataset_path: Path):
-    files = []
-    for l in labels[:11]:
-        files.extend(list(map(str, (dataset_path / l).glob("*.wav"))))
+def create_data_path(dataset_path: Path, data):
+    return [f'{dataset_path}/{x}' for x in data]
 
+def load_data(dataset_path: Path):
 
-    files.extend(list(map(str, (dataset_path/ 'silence').glob('*.wav')))*430)
+    with open(dataset_path / f'X_train.pickle', 'rb') as f:
+        X_train = pickle.load(f)
+    X_train = create_data_path(dataset_path, X_train)
 
-    return files
+    with open(dataset_path / f'X_val.pickle', 'rb') as f:
+        X_val = pickle.load(f)
+    X_val = create_data_path(dataset_path, X_val)
+
+    with open(dataset_path / f'X_test.pickle', 'rb') as f:
+        X_test = pickle.load(f)
+    X_test = create_data_path(dataset_path, X_test)
+    
+    return X_train, X_val, X_test
 
 lables_dict = {l: i for i, l in enumerate(labels)}
 
@@ -124,10 +131,12 @@ if __name__ == "__main__":
 
     data_path = Path(config["dataset"]["path"])
 
+    X_train, X_val, X_test = load_data(data_path)
+    print(X_train[0])
     
-    ds = (
+    ds_train = (
         
-        tf.data.Dataset.from_tensor_slices(generate_file_list(data_path))
+        tf.data.Dataset.from_tensor_slices(X_train)
         .shuffle(buffer_size=5000)
         .map(tf_read_wav)
         .apply(tf.data.experimental.ignore_errors())
@@ -139,7 +148,7 @@ if __name__ == "__main__":
         .prefetch(tf.data.AUTOTUNE)
     )
     number_of_classes = len(labels)
-    input_shape = [a[0].shape for a in ds.take(1)][0]
+    input_shape = [a[0].shape for a in ds_train.take(1)][0]
     params = config["model"].get("params", {})
     model = models[config["model"]["name"]](input_shape, number_of_classes, **params)
     model.summary()
@@ -149,7 +158,7 @@ if __name__ == "__main__":
 
     # early_stopping = tf.keras.callbacks.EarlyStopping(patience=10)
     # check_point = tf.keras.callbacks.ModelCheckpoint(model_filename)
-    history = model.fit(ds.batch(512), epochs=epochs)
+    history = model.fit(ds_train.batch(512), epochs=epochs)
 
     # model = cnn_inception2((input_shape[0], input_shape[1]), 10)
     # model.summary()
