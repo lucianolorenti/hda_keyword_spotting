@@ -1,0 +1,13 @@
+dataset:
+  path: /Users/emi/unipd/hda/dataset/
+
+model:
+  path: /Users/emi/unipd/hda/models/
+  name: 'cnn_visiontransformer'
+
+train:
+  batch_size: 2048
+  epochs: 1
+
+
+output_path: /Users/emi/unipd/hda/models/

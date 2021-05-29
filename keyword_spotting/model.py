@@ -1,5 +1,4 @@
 import tensorflow as tf
-from kapre.composed import get_melspectrogram_layer
 from tcn import TCN
 from tensorflow.keras import Model
 from tensorflow.python.keras import backend as K
@@ -9,11 +8,12 @@ from tensorflow.python.keras.layers import (GRU, Activation, Add,
                                             Concatenate, Conv2D, Dense, Dot,
                                             Dropout, Flatten, Input, Lambda,
                                             LayerNormalization, Reshape,
-                                            Softmax, SpatialDropout2D)
+                                            Softmax, SpatialDropout2D, 
+                                            Embedding, Layer, MultiHeadAttention)
 from tensorflow.python.ops import math_ops
-
-from keyword_spotting.data import SAMPLE_RATE
-
+import numpy as np
+from tensorflow import keras
+import tensorflow_addons as tfa
 
 def ExpandDimension():
     return Lambda(lambda x: K.expand_dims(x))
@@ -409,6 +409,103 @@ def cnn_trad_fpool3(input_shape, number_of_classes):
                   loss='sparse_categorical_crossentropy')
     return model
 
+class PatchEncoder(Layer):
+    def __init__(self, num_patches, projection_dim):
+        super(PatchEncoder, self).__init__()
+        self.num_patches = num_patches
+        self.projection = Dense(units=projection_dim)
+        self.position_embedding = Embedding(
+            input_dim=num_patches, output_dim=projection_dim
+        )
+
+    def call(self, patch):
+        positions = tf.range(start=0, limit=self.num_patches, delta=1)
+        encoded = self.projection(patch) + self.position_embedding(positions)
+        return encoded
+
+class Patches(Layer):
+    def __init__(self, patch_size):
+        super(Patches, self).__init__()
+        self.patch_size = patch_size
+
+    def call(self, images):
+        batch_size = tf.shape(images)[0]
+        patches = tf.image.extract_patches(
+            images=images,
+            sizes=[1, self.patch_size[0], self.patch_size[1], 1],
+            strides=[1, self.patch_size[0], self.patch_size[1], 1],
+            rates=[1, 1, 1, 1],
+            padding="VALID",
+        )
+        patch_dims = patches.shape[-1]
+        patches = tf.reshape(patches, [batch_size, -1, patch_dims])
+        return patches
+
+def mlp(x, hidden_units, dropout_rate):
+    for units in hidden_units:
+        x = Dense(units, activation=tf.nn.gelu)(x)
+        x = Dropout(dropout_rate)(x)
+    return x
+
+def cnn_visiontransformer(input_shape, number_of_classes):
+    #implements the Vision Transformer (ViT) model by Alexey Dosovitskiy et al. 
+    # for image classification, and demonstrates it on the CIFAR-100 dataset.
+   
+    learning_rate = 0.001
+    weight_decay = 0.0001
+    batch_size = 256
+    num_epochs = 100
+    patch_size = (4,6)  # Size of the patches to be extract from the input images
+    num_patches = int((input_shape[0] / patch_size[0])*(input_shape[1] / patch_size[1])) 
+    projection_dim = 64
+    num_heads = 3
+    transformer_units = [
+        projection_dim * 2,
+        projection_dim,
+    ]  # Size of the transformer layers
+    transformer_layers = 4
+    mlp_head_units = [256, 128]  # Size of the dense layers of the final classifier
+
+    input = Input(shape=input_shape)
+    x = input
+    x = ExpandDimension()(x)
+    # Create patches.
+    patches = Patches(patch_size)(x)
+    # Encode patches.
+    encoded_patches = PatchEncoder(num_patches, projection_dim)(patches)
+
+    # Create multiple layers of the Transformer block.
+    for _ in range(transformer_layers):
+        # Layer normalization 1.
+        x1 = LayerNormalization(epsilon=1e-6)(encoded_patches)
+        # Create a multi-head attention layer.
+        attention_output = MultiHeadAttention(
+            num_heads=num_heads, key_dim=projection_dim, dropout=0.1
+        )(x1, x1)
+        # Skip connection 1.
+        x2 = Add()([attention_output, encoded_patches])
+        # Layer normalization 2.
+        x3 = LayerNormalization(epsilon=1e-6)(x2)
+        # MLP.
+        x3 = mlp(x3, hidden_units=transformer_units, dropout_rate=0.1)
+        # Skip connection 2.
+        encoded_patches = Add()([x3, x2])
+
+    # Create a [batch_size, projection_dim] tensor.
+    representation = LayerNormalization(epsilon=1e-6)(encoded_patches)
+    representation = Flatten()(representation)
+    representation = Dropout(0.5)(representation)
+    # Add MLP.
+    features = mlp(representation, hidden_units=mlp_head_units, dropout_rate=0.5)
+    # Classify outputs.
+
+    x = Dense(number_of_classes, activation='softmax')(features)
+    model = Model(inputs=[input], outputs=[x])
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    model.compile(optimizer=optimizer,
+                  metrics=['accuracy'],
+                  loss='sparse_categorical_crossentropy')
+    return model
 
 models = {
     'cnn_trad_fpool3': cnn_trad_fpool3,
@@ -417,5 +514,6 @@ models = {
     'cnn_residual': cnn_residual,
     'cnn_inception': cnn_inception,
     'cnn_residual2': cnn_residual2,
-    'cnn_inception2': cnn_inception2
+    'cnn_inception2': cnn_inception2,
+    'cnn_visiontransformer':cnn_visiontransformer,
 }
