@@ -14,6 +14,9 @@ from keyword_spotting.feature_extraction.utils import read_wav
 from keyword_spotting.model import cnn_inception2, models
 from tqdm.auto import tqdm 
 import logging
+
+from tensorflow.keras.callbacks import EarlyStopping
+
 logging.basicConfig()
 logger = logging.getLogger('hda')
 
@@ -61,7 +64,7 @@ def load_data(dataset_path: Path):
         X_test = pickle.load(f)
     X_test = create_data_path(dataset_path, X_test)
 
-    return X_train[:500], X_val, X_test
+    return X_train, X_val, X_test
 
 
 lables_dict = {l: i for i, l in enumerate(labels)}
@@ -152,40 +155,24 @@ if __name__ == "__main__":
     output_path = Path(config["output_path"])
 
     X_train, X_val, X_test = load_data(data_path)
-    print(len(X_train))
-    print(len(X_val))
-    print(len(X_test))
-    print('--------------------------------------------zzzzzzzzzzzzz------------')
 
     ds_train = (
         tf.data.Dataset.from_tensor_slices(X_train)
-        .shuffle(buffer_size=50000)
-        .map(tf_read_wav,        num_parallel_calls=tf.data.AUTOTUNE)
-        .cache()
+        .map(tf_read_wav,        num_parallel_calls=4)
         .apply(tf.data.experimental.ignore_errors())
-        .map(tf_add_noise,        num_parallel_calls=tf.data.AUTOTUNE)
-        .map(tf_extract_features,        num_parallel_calls=tf.data.AUTOTUNE)
-        .map(tf_windowed,        num_parallel_calls=tf.data.AUTOTUNE)
+        .shuffle(buffer_size=8000)
+        .map(tf_add_noise)
+        .map(tf_extract_features,        num_parallel_calls=4)
+        .map(tf_windowed)
         .flat_map(split_window)
         .map(shapeify)
-        .prefetch(5000000)
+        .prefetch(tf.data.AUTOTUNE)
     )
-    i = 0
-    for a in tqdm(ds_train):
-        i+=1
-    print(i)    
     number_of_classes = len(labels)
     #input_shape = [a[0].shape for a in ds_train.take(1)][0]
     input_shape = [32, 12]
     params = config["model"].get("params", {})
 
-    print('Aaaaaaaaaa')
-    print('SXSCSCDC----------dSDSDSDSSD--------1211212221112121')
-    print(f'len {ds_train }')
-    print(f'data {input_shape[0]}')
-    # 32 * 11 total number of features
-    print(f'input shape {input_shape}')
-    print('---------------BBBBBBBB------------------------------<<<<<<<<<')
     model = models[config["model"]["name"]](input_shape, number_of_classes, **params)
     model.summary()
     epochs = config["train"]["epochs"]
@@ -204,20 +191,19 @@ if __name__ == "__main__":
     ds_val = (
         tf.data.Dataset.from_tensor_slices(X_val)
         .map(tf_read_wav)
-        
         .apply(tf.data.experimental.ignore_errors())
         .prefetch(tf.data.AUTOTUNE)
         .map(tf_extract_features)
         .map(tf_windowed)
         .flat_map(split_window)
         .map(shapeify)
-        .cache()
         .prefetch(tf.data.AUTOTUNE)
     )
 
     start = time()
     history = model.fit(
-        ds_train.batch(batch_size), validation_data=ds_val.batch(batch_size), epochs=epochs
+        ds_train.batch(batch_size), validation_data=ds_val.batch(batch_size), epochs=epochs,
+        callbacks=[EarlyStopping(patience=5)]
     )
     total_time=time()-start
 
