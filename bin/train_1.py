@@ -181,12 +181,7 @@ if __name__ == "__main__":
 
 
     batch_size = config["train"]["batch_size"]
-    # early_stopping = tf.keras.callbacks.EarlyStopping(patience=10)
-    # check_point = tf.keras.callbacks.ModelCheckpoint(model_filename)
 
-    # model = cnn_inception2((input_shape[0], input_shape[1]), 10)
-    # model.summary()
-    # model.fit(ds, epochs=5)
 
     ds_val = (
         tf.data.Dataset.from_tensor_slices(X_val)
@@ -209,13 +204,18 @@ if __name__ == "__main__":
 
     results = []
     for audio_file in tqdm(X_test):
-        label = Path(audio_file).resolve().parts[-2]
-        label = lables_dict[label]
-        sample_rate, signal = read_wav(audio_file)
-        data = keyword_extract_features(sample_rate, signal)
-        data, labels = windowed_(data, label)
-        predicted = model.predict(data)
-        results.append((audio_file, label, predicted))
+        try:
+            label = Path(audio_file).resolve().parts[-2]
+            label = lables_dict[label]
+            sample_rate, signal = read_wav(audio_file)
+            data = keyword_extract_features(sample_rate, signal)
+            data, labels = windowed_(data, label)
+            predicted = model.predict(data)
+            results.append((audio_file, label, predicted))
+        except:
+            pass
 
     with open(output_path, 'wb') as file:
         pickle.dump((config, total_time, results), file)
+
+    model.save_weights(str(model_path))
