@@ -15,7 +15,7 @@ from keyword_spotting.model import cnn_inception2, models
 import pickle
 from sklearn.model_selection import train_test_split
 from keyword_spotting.data.utils import distribution_labels
-
+from scipy.io import wavfile
 
 def hash_to_int(s):
     hash_object = hashlib.sha1(str.encode(s))
@@ -47,7 +47,7 @@ def generate_file_list(dataset_path: Path, labels):
     for l in labels[:11]:
         files.extend(list((dataset_path / l).glob("*.wav")))
 
-    files.extend(list((dataset_path / "silence").glob("*.wav")) * 430)
+    files.extend(list((dataset_path / "silence").glob("*.wav")))
 
     files = sorted(files, key=lambda path: path.stem)
     return files
@@ -94,6 +94,7 @@ if __name__ == "__main__":
         )
     files = sorted(files, key=lambda x: x[1])
 
+
     unknown_path = output_path / "unknown"
     unknown_path.mkdir(exist_ok=True, parents=True)
     for f, _ in files[:3200]:
@@ -107,7 +108,16 @@ if __name__ == "__main__":
     shutil.copytree(dataset / folder, output_path / folder)
 
     folder = "silence"
-    shutil.copytree(dataset / "_background_noise_", output_path / folder)
+    (output_path / folder).mkdir(parents=True, exist_ok=True)
+    noise_file_list = list((dataset / "_background_noise_").glob("*.wav"))
+    for i in range(3900):
+        file_path = np.random.choice(noise_file_list)
+        fs, data = read_wav(file_path)
+
+        j = np.random.randint(fs+1, data.shape[0])
+        new_audio = data[j-fs:j]
+        file_path = file_path.stem + f'_{i}_{j}.wav'
+        wavfile.write(output_path / folder / file_path, fs, new_audio)
 
     selected_keywords.extend(['unknown', 'silence'])
     
