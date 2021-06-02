@@ -1,21 +1,15 @@
 import argparse
-from pathlib import Path
 import hashlib
+import pickle
 import shutil
-import argparse
+from pathlib import Path
 
 import numpy as np
-import tensorflow as tf
-import yaml
-from keyword_spotting.feature_extraction.utils import (
-    extract_features as keyword_extract_features,
-)
-from keyword_spotting.feature_extraction.utils import read_wav
-from keyword_spotting.model import cnn_inception2, models
-import pickle
-from sklearn.model_selection import train_test_split
 from keyword_spotting.data.utils import distribution_labels
+from keyword_spotting.feature_extraction.utils import read_wav
 from scipy.io import wavfile
+from sklearn.model_selection import train_test_split
+
 
 def hash_to_int(s):
     hash_object = hashlib.sha1(str.encode(s))
