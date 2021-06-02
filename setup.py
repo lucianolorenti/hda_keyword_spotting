@@ -15,6 +15,7 @@ setup(name='KeywordSpotter',
           'tqdm',
           'scipy',
           'scikit-learn',
-          'librosa'
+          'librosa',
+          'tensorflow_addons'
       ],
       )
