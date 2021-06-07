@@ -1,14 +1,16 @@
 dataset:
-  path: /home/luciano/speech3
-  name: 'basic'
+  path: /Users/emi/unipd/hda/dataset/
 
 model:
-  path: /home/luciano/models
+  path: /Users/emi/unipd/hda/models/
   name: 'cnn_residual2'
   params:
     n_residuals: 3
+    n_filters: 16
     
 
 train:
-  batch_size: 1024
-  epochs: 50
+  batch_size: 64
+  epochs: 27
+
+output_path: /Users/emi/unipd/hda/models/
