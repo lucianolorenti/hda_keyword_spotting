@@ -9,7 +9,8 @@ from tensorflow.python.keras.layers import (GRU, Activation, Add,
                                             Dropout, Flatten, Input, Lambda,
                                             LayerNormalization, Reshape,
                                             Softmax, SpatialDropout2D, 
-                                            Embedding, Layer, MultiHeadAttention)
+                                            Embedding, Layer, MultiHeadAttention,
+                                            GlobalAveragePooling2D)
 from tensorflow.python.ops import math_ops
 import numpy as np
 from tensorflow import keras
@@ -19,10 +20,10 @@ def ExpandDimension():
     return Lambda(lambda x: K.expand_dims(x))
 
 
-def cnn_residual2(input_shape,  number_of_classes, n_residuals=3):
+def cnn_residual2(input_shape,  number_of_classes, n_filters=32, n_residuals=3):
     """
-    Convolutional Neural Networks for Small-footprint Keyword Spotting
-    Tara N. Sainath, Carolina Parada
+    Deep residual learning for small-footprint keyword spotting.
+    Tang, Raphael, and Jimmy Lin. 
     """
     input = Input(shape=input_shape)
     x = input
@@ -32,43 +33,52 @@ def cnn_residual2(input_shape,  number_of_classes, n_residuals=3):
     # we would rather have it the other way around for LSTMs
 
     x = ExpandDimension()(x)
-    identity = x
-    identity = Conv2D(45,
-                      strides=(1, 1),
-                      kernel_size=(3, 3),
-                      padding='same',
-                      use_bias=False)(x)
-    i = 0
+
+    i= 1
+    x = Conv2D(filters=n_filters,
+            strides=(1, 1),
+            kernel_size=(3, 3),
+            #dilation_rate=int(2**(i // 3)),
+            padding='same',
+            use_bias=False)(x)
+    x = Activation('relu')(x)
+    x = BatchNormalization()(x)
+    filters_increase=1
     for j in range(n_residuals):
-        i += 1
-        x = Conv2D(45,
+        i+=1
+        filters_increase+=1
+        filters = 2**(filters_increase-1)
+
+        x = Conv2D(filters=n_filters*filters,
                    strides=(1, 1),
                    kernel_size=(3, 3),
-                   dilation_rate=int(2**(i // 3)),
+                   #dilation_rate=int(2**(i // 3)),
                    padding='same',
                    use_bias=False)(x)
         x = Activation('relu')(x)
-        x = BatchNormalization()(x)
+        x1 = BatchNormalization()(x)
         i = 2
-        x = Conv2D(45,
+        x = Conv2D(filters=n_filters*filters,
                    strides=(1, 1),
                    kernel_size=(3, 3),
-                   dilation_rate=int(2**(i // 3)),
+                   #dilation_rate=int(2**(i // 3)),
                    padding='same',
-                   use_bias=False)(x)
+                   use_bias=False)(x1)
         x = Activation('relu')(x)
-        x = BatchNormalization()(x)
+        x2 = BatchNormalization()(x)
 
-        x = Add()([x, identity])
+        x = Add()([x1, x2])
 
-    x = Conv2D(45,
+    filters_increase+=1    
+    filters=2**(filters_increase-1)
+    x = Conv2D(filters=n_filters*filters,
                strides=(1, 1),
                kernel_size=(3, 3),
                padding='same',
                use_bias=True)(x)
     x = Activation('relu')(x)
     x = BatchNormalization()(x)
-    x = AveragePooling2D()(x)
+    x = GlobalAveragePooling2D()(x)
     x = Flatten()(x)
     output = Dense(number_of_classes, activation='softmax', name='output')(x)
 
@@ -513,7 +523,7 @@ models = {
     'cnn_attention': cnn_attention,
     'cnn_residual': cnn_residual,
     'cnn_inception': cnn_inception,
-    'cnn_residual2': cnn_residual2,
+    'cnn_residual2': cnn_residual2, 
     'cnn_inception2': cnn_inception2,
-    'cnn_visiontransformer':cnn_visiontransformer,
+    'cnn_visiontransformer':cnn_visiontransformer, 
 }
