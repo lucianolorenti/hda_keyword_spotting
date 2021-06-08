@@ -14,8 +14,7 @@ from keyword_spotting.feature_extraction.utils import read_wav
 from keyword_spotting.model import cnn_inception2, models
 from tqdm.auto import tqdm 
 import logging
-
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 logging.basicConfig()
 logger = logging.getLogger('hda')
@@ -168,6 +167,9 @@ if __name__ == "__main__":
         .map(shapeify)
         .prefetch(tf.data.AUTOTUNE)
     )
+    #asd=np.sum(1 for _ in ds_train)
+    #print(asd)
+    print('---<<<<<----ZZZ-->>>>>----')
     number_of_classes = len(labels)
     #input_shape = [a[0].shape for a in ds_train.take(1)][0]
     input_shape = [32, 12]
@@ -198,7 +200,12 @@ if __name__ == "__main__":
     start = time()
     history = model.fit(
         ds_train.batch(batch_size), validation_data=ds_val.batch(batch_size), epochs=epochs,
-        callbacks=[EarlyStopping(patience=5)]
+        #steps_per_epoch=asd // batch_size,
+        
+        callbacks=[
+            EarlyStopping(patience=5),
+            ReduceLROnPlateau(patience=1)
+        ]
     )
     total_time=time()-start
 

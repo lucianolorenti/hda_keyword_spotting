@@ -11,6 +11,7 @@ from tensorflow.python.keras.layers import (GRU, Activation, Add,
                                             Softmax, SpatialDropout2D, 
                                             Embedding, Layer, MultiHeadAttention,
                                             GlobalAveragePooling2D)
+
 from tensorflow.python.ops import math_ops
 import numpy as np
 from tensorflow import keras
@@ -83,7 +84,8 @@ def cnn_residual2(input_shape,  number_of_classes, n_filters=32, n_residuals=3):
     output = Dense(number_of_classes, activation='softmax', name='output')(x)
 
     model = Model(inputs=[input], outputs=[output])
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    optimizer = tf.keras.optimizers.SGD(learning_rate=0.1, momentum=0.9)
+    
     model.compile(optimizer=optimizer,
                   metrics=['accuracy'],
                   loss='sparse_categorical_crossentropy')
