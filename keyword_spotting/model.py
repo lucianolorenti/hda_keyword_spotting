@@ -79,12 +79,13 @@ def cnn_residual_increasing_filters(input_shape,  number_of_classes, n_filters=3
                use_bias=True)(x)
     x = Activation('relu')(x)
 
-    x = AveragePooling2D((2,2))(x)
+    x = GlobalAveragePooling2D()(x)
     x = Flatten()(x)
+    x = Dropout(0.5)(x)
     output = Dense(number_of_classes, activation='softmax', name='output', kernel_initializer='he_normal')(x)
 
     model = Model(inputs=[input], outputs=[output])
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
     
     model.compile(optimizer=optimizer,
                   metrics=['accuracy'],
