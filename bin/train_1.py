@@ -15,6 +15,7 @@ from keyword_spotting.model import cnn_inception2, models
 from tqdm.auto import tqdm 
 import logging
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from python_speech_features import mfcc
 
 logging.basicConfig()
 logger = logging.getLogger('hda')
@@ -71,7 +72,8 @@ lables_dict = {l: i for i, l in enumerate(labels)}
 
 def tf_extract_features(sample_rate, signal, label):
     def process_file(sample_rate, signal, label):
-        return keyword_extract_features(sample_rate, signal), label
+
+        return mfcc(signal, sample_rate, numcep=12, nfft=512).astype('float32'), label
 
     return tf.numpy_function(
         process_file, [sample_rate, signal, label], [tf.float32, tf.int32]
@@ -117,7 +119,8 @@ def tf_add_noise(sample_rate, signal, label):
             )
             fs, data_noise = read_wav(noise_path)
             min_length = min(data_noise.shape[0], signal.shape[0])
-            signal[:min_length] = signal[:min_length] + data_noise[:min_length]
+            noise_factor = np.random.rand() * 0.5
+            signal[:min_length] = signal[:min_length] + noise_factor*data_noise[:min_length]
         return sample_rate, signal, label
 
     return tf.numpy_function(
@@ -159,17 +162,18 @@ if __name__ == "__main__":
         tf.data.Dataset.from_tensor_slices(X_train)
         .map(tf_read_wav,        num_parallel_calls=4)
         .apply(tf.data.experimental.ignore_errors())
-        .shuffle(buffer_size=8000)
         .map(tf_add_noise)
         .map(tf_extract_features,        num_parallel_calls=4)
         .map(tf_windowed)
         .flat_map(split_window)
+        .shuffle(buffer_size=8000)
         .map(shapeify)
+        
         .prefetch(tf.data.AUTOTUNE)
     )
     #asd=np.sum(1 for _ in ds_train)
     #print(asd)
-    print('---<<<<<----ZZZ-->>>>>----')
+
     number_of_classes = len(labels)
     #input_shape = [a[0].shape for a in ds_train.take(1)][0]
     input_shape = [32, 12]
@@ -204,7 +208,7 @@ if __name__ == "__main__":
         
         callbacks=[
             EarlyStopping(patience=5),
-            ReduceLROnPlateau(patience=1)
+            ReduceLROnPlateau(patience=1, verbose=1)
         ]
     )
     total_time=time()-start

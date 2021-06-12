@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tcn import TCN
+import tensorflow_addons as tfa
 from tensorflow.keras import Model
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.layers import (GRU, Activation, Add,
@@ -28,7 +29,6 @@ def cnn_residual_increasing_filters(input_shape,  number_of_classes, n_filters=3
     """
     input = Input(shape=input_shape)
     x = input
-    x = LayerNormalization(axis=1)(x)
 
     # note that Melspectrogram puts the sequence in shape (batch_size, melDim, timeSteps, 1)
     # we would rather have it the other way around for LSTMs
@@ -40,8 +40,8 @@ def cnn_residual_increasing_filters(input_shape,  number_of_classes, n_filters=3
             strides=(1, 1),
             kernel_size=(3, 3),
             #dilation_rate=int(2**(i // 3)),
-            padding='same',
-            use_bias=False)(x)
+            padding='valid',
+            use_bias=True)(x)
     x = Activation('relu')(x)
     x = BatchNormalization()(x)
     for j in range(n_residuals):
@@ -49,7 +49,7 @@ def cnn_residual_increasing_filters(input_shape,  number_of_classes, n_filters=3
         x = Conv2D(filters=n_filters,
                    strides=(1, 1),
                    kernel_size=(3, 3),
-                   #dilation_rate=int(2**(i // 3)),
+                   dilation_rate=int(2**(j // 3)),
                    padding='same',
                    use_bias=False)(x)
         x = Activation('relu')(x)
@@ -57,7 +57,7 @@ def cnn_residual_increasing_filters(input_shape,  number_of_classes, n_filters=3
         x = Conv2D(filters=n_filters,
                    strides=(1, 1),
                    kernel_size=(3, 3),
-                   #dilation_rate=int(2**(i // 3)),
+                   dilation_rate=int(2**(j // 3)),
                    padding='same',
                    use_bias=False)(x)
         x = Activation('relu')(x)
@@ -69,16 +69,22 @@ def cnn_residual_increasing_filters(input_shape,  number_of_classes, n_filters=3
     x = Conv2D(filters=n_filters,
                strides=(1, 1),
                kernel_size=(3, 3),
-               padding='same',
+               padding='valid',
                use_bias=True)(x)
     x = Activation('relu')(x)
-    x = BatchNormalization()(x)
-    x = AveragePooling2D()(x)
+    x = Conv2D(filters=n_filters,
+               strides=(1, 1),
+               kernel_size=(3, 3),
+               padding='valid',
+               use_bias=True)(x)
+    x = Activation('relu')(x)
+
+    x = AveragePooling2D((2,2))(x)
     x = Flatten()(x)
-    output = Dense(number_of_classes, activation='softmax', name='output')(x)
+    output = Dense(number_of_classes, activation='softmax', name='output', kernel_initializer='he_normal')(x)
 
     model = Model(inputs=[input], outputs=[output])
-    optimizer = tf.keras.optimizers.SGDW(learning_rate=0.1, momentum=0.9, weight_decay=0.0001)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
     
     model.compile(optimizer=optimizer,
                   metrics=['accuracy'],
