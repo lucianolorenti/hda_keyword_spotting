@@ -76,7 +76,7 @@ def cnn_residual_increasing_filters(input_shape,  number_of_classes, learning_ra
 
 
   
-    x = AveragePooling2D()(x)
+    x = GlobalAveragePooling2D()(x)
     x = Flatten()(x)
 
     output = Dense(number_of_classes, activation='softmax', name='output', kernel_initializer='he_normal')(x)
@@ -457,20 +457,18 @@ def mlp(x, hidden_units, dropout_rate):
         x = Dropout(dropout_rate)(x)
     return x
 
-def cnn_visiontransformer(input_shape, number_of_classes, learning_rate=0.001):
+def cnn_visiontransformer(input_shape, number_of_classes, learning_rate=0.001, n_dense_layer=1, num_heads = 3, transformer_layers = 4, projection_dim = 16, patch_x=8, patch_y=8):
     #implements the Vision Transformer (ViT) model by Alexey Dosovitskiy et al. 
     # for image classification, and demonstrates it on the CIFAR-100 dataset.
    
-    patch_size = (8,8)  # Size of the patches to be extract from the input images
+    patch_size = (patch_x,patch_y)  # Size of the patches to be extract from the input images
     num_patches = int((input_shape[0] / patch_size[0])*(input_shape[1] / patch_size[1])) 
-    projection_dim = 16
-    num_heads = 3
+
     transformer_units = [
         projection_dim * 2,
         projection_dim,
     ]  # Size of the transformer layers
-    transformer_layers = 4
-    mlp_head_units = [64]  # Size of the dense layers of the final classifier
+    
 
     input = Input(shape=input_shape)
     x = input
@@ -503,7 +501,11 @@ def cnn_visiontransformer(input_shape, number_of_classes, learning_rate=0.001):
     representation = Flatten()(representation)
     representation = Dropout(0.5)(representation)
     # Add MLP.
-    features = mlp(representation, hidden_units=mlp_head_units, dropout_rate=0.5)
+    x = representation
+    for units in range(n_dense_layer):
+        x = Dense(int(x.shape[1]/4), activation=tf.nn.gelu)(x)
+        x = Dropout(0.5)(x)
+    features = x
     # Classify outputs.
 
     x = Dense(number_of_classes, activation='softmax')(features)
