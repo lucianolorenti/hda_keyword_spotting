@@ -1,13 +1,16 @@
-dataset:
-  path: /Users/emi/unipd/hda/dataset/
-
 model:
-  path: /Users/emi/unipd/hda/models/
   name: 'cnn_visiontransformer'
+  params:
+    learning_rate: 0.01
+    n_dense_layer: 1
+    num_heads: 3
+    transformer_layers: 4
+    projection_dim: 12
+    patch_x: 10
+    patch_y: 8
+  windowed: False
 
 train:
-  batch_size: 2048
+  batch_size: 64
   epochs: 1
-
-
-output_path: /Users/emi/unipd/hda/models/
+  reduce_on_plateau: True
