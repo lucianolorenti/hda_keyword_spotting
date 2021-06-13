@@ -88,7 +88,7 @@ if __name__ == "__main__":
         results = predictions_per_song(model, X_test)
     else:
         ds_test = build_dataset_generator(
-            X_test[:5], data_path, config["model"]["windowed"], noise=False, shuffle=False
+            X_test, data_path, config["model"]["windowed"], noise=False, shuffle=False
         )
         results = model.predict(ds_test.batch(128))
 
