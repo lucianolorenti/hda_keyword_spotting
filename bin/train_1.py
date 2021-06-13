@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     model_path = output_path / output_filename
     results_path = output_path / (output_filename + "_results.pkl")
-    print(model_path, results_path)
+
     batch_size = config["train"]["batch_size"]
 
     callbacks = [EarlyStopping(patience=5)]
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     if config["model"]["windowed"]:
         callbacks.append(PerAudioAccuracy(model, X_val))
     ds_val = build_dataset_generator(
-        X_val[:5], data_path, config["model"]["windowed"], noise=False, shuffle=False
+        X_val, data_path, config["model"]["windowed"], noise=False, shuffle=False
     )
 
     start = time()
