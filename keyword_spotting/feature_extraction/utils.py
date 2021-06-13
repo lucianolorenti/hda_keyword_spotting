@@ -5,7 +5,7 @@ import numpy as np
 import scipy.io.wavfile
 from scipy.fftpack import dct
 from scipy.io import wavfile
-
+from python_speech_features import mfcc
 
 def read_wav(file, frame_length=25, frame_stride=10):
     """
@@ -109,14 +109,41 @@ def open_extract_features(file, NFFT=256, nfilt=40):
     
 
 
-def extract_features(sample_rate, signal, NFFT=256, nfilt=40):
-    frames, frame_length = sliding_window(
-        signal, sample_rate)
+def extract_features(signal, sample_rate, NFFT=256, nfilt=40):
+    return mfcc(signal, sample_rate, numcep=40, nfilt=nfilt, nfft=512).astype('float32')
+    #frames, frame_length = sliding_window(
+    #    signal, sample_rate)
+    #frames = power_spectrum(hamming(frames, frame_length), NFFT=NFFT)
+    #frames = filter_banks(frames,
+    #                          sample_rate,
+    #                          NFFT,
+    #                          nfilt)#
 
-    frames = power_spectrum(hamming(frames, frame_length), NFFT=NFFT)
-    frames = filter_banks(frames,
-                          sample_rate,
-                          NFFT,
-                          nfilt)
+    #return np.float32(frames)
 
-    return np.float32(frames)
+
+def windowed(data, label, left: int = 30, right: int = 10):
+    d = np.array(
+        [data[j - left : j + right, :] for j in range(left, data.shape[0] - right)],
+        dtype=np.float32,
+    )
+    labels = np.array(
+        [label for j in range(left, data.shape[0] - right)], dtype=np.int32
+    )
+
+    return d, labels
+
+
+def dct(n_filters, n_input):
+    basis = np.empty((n_filters, n_input))
+    basis[0, :] = 1.0 / np.sqrt(n_input)
+
+    samples = np.arange(1, 2 * n_input, 2) * np.pi / (2.0 * n_input)
+
+    for i in range(1, n_filters):
+        basis[i, :] = np.cos(i * samples) * np.sqrt(2.0 / n_input)
+
+    return basis
+
+
+dct_filters = dct(40, 40)

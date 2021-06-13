@@ -1,6 +1,23 @@
+from pathlib import Path
 import numpy as np
 from scipy import stats
+from keyword_spotting.feature_extraction.utils import extract_features, read_wav, windowed
 
+labels = [
+    "yes",
+    "no",
+    "up",
+    "down",
+    "left",
+    "right",
+    "on",
+    "off",
+    "stop",
+    "go",
+    "unknown",
+    "silence",
+]
+labels_dict = {l: i for i, l in enumerate(labels)}
 
 def moving_average(data_set, periods=3):
     weights = np.ones(periods) / (periods)
@@ -73,12 +90,30 @@ def get_predictions(labels_posteriors, total_labels, smooth_w=2, max_w=5):
     frame_best_confidence = np.argmax(confidences)
 
     # For the frame with highest confidence we obtain the label with the highest posterior
-    predicted_label = np.argmax(labels_posteriors[frame_best_confidence])
-
-    sorted_confidences = np.argsort(confidences)[::-1]
-    print(np.array(confidences)[sorted_confidences[:10]])
-    label_most_confidence = [np.argmax(labels_posteriors[i]) for i in sorted_confidences[:10]]
+    return np.argmax(labels_posteriors[frame_best_confidence])
 
 
-    
-    return stats.mode(label_most_confidence)[0]
+def predictions_per_song(model, dataset):
+    results = []
+    for audio_file in dataset:
+        try:
+            label = Path(audio_file).resolve().parts[-2]
+            label = labels_dict[label]
+            sample_rate, signal = read_wav(audio_file)
+            data = extract_features(signal, sample_rate)
+            data, labels = windowed(data, label)
+            predicted = model.predict(data)
+            results.append((audio_file, label, predicted))
+        except:
+            pass
+
+    return results
+
+
+def evaluate_perdictions(predictions):
+    preds = []
+    trues = []
+    for _, real_label, labels_posteriors in predictions:
+        preds.extend((np.ones(labels_posteriors.shape[0])*real_label).astype('int'))
+        trues.extend(np.argmax(labels_posteriors,axis=1))    
+    return preds, trues
