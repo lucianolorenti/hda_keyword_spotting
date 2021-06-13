@@ -41,7 +41,7 @@ if __name__ == "__main__":
     X_train, X_val, X_test = load_data(data_path)
 
     ds_train = build_dataset_generator(
-        X_train[:5], data_path, config["model"]["windowed"], noise=True, shuffle=True
+        X_train, data_path, config["model"]["windowed"], noise=True, shuffle=True
     )
 
     number_of_classes = len(labels)
@@ -85,13 +85,12 @@ if __name__ == "__main__":
     model.save_weights(str(model_path))
 
     if config["model"]["windowed"]:
-        results = predictions_per_song(X_test[:5])
+        results = predictions_per_song(model, X_test)
     else:
         ds_test = build_dataset_generator(
-            X_test[:5], data_path, config["model"]["windowed"], noise=True, shuffle=True
+            X_test[:5], data_path, config["model"]["windowed"], noise=False, shuffle=False
         )
-        results = model.predict(ds_test)
+        results = model.predict(ds_test.batch(128))
 
-    print(results)
     with open(results_path, "wb") as file:
         pickle.dump((config, total_time, results), file)
