@@ -11,7 +11,7 @@ from tensorflow.python.keras.layers import (GRU, Activation, Add,
                                             LayerNormalization, Reshape,
                                             Softmax, SpatialDropout2D, 
                                             Embedding, Layer, MultiHeadAttention,
-                                            GlobalAveragePooling2D)
+                                            GlobalAveragePooling2D, AveragePooling1D)
 
 from tensorflow.python.ops import math_ops
 import numpy as np
@@ -22,7 +22,7 @@ def ExpandDimension():
     return Lambda(lambda x: K.expand_dims(x))
 
 
-def cnn_residual_increasing_filters(input_shape,  number_of_classes, n_filters=32, n_residuals=3):
+def cnn_residual_increasing_filters(input_shape,  number_of_classes, learning_rate=0.001, n_filters=32, n_residuals=3):
     """
     Deep residual learning for small-footprint keyword spotting.
     Tang, Raphael, and Jimmy Lin. 
@@ -85,7 +85,7 @@ def cnn_residual_increasing_filters(input_shape,  number_of_classes, n_filters=3
     output = Dense(number_of_classes, activation='softmax', name='output', kernel_initializer='he_normal')(x)
 
     model = Model(inputs=[input], outputs=[output])
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     
     model.compile(optimizer=optimizer,
                   metrics=['accuracy'],
@@ -312,7 +312,7 @@ def cnn_inception(input_shape, number_of_classes, n_filters=16, sizes=[5, 10, 15
     return model
 
 
-def cnn_inception2(input_shape, number_of_classes, n_filters=16, sizes=[5, 10, 15]):
+def cnn_inception2(input_shape, number_of_classes, learnig_rate=0.001, n_filters=16, sizes=[5, 10, 15]):
     """
     Convolutional Neural Networks for Small-footprint Keyword Spotting
     Tara N. Sainath, Carolina Parada
@@ -375,7 +375,7 @@ def cnn_inception2(input_shape, number_of_classes, n_filters=16, sizes=[5, 10, 1
     x = Dense(number_of_classes, activation='softmax')(x)
     model = Model(inputs=[input], outputs=[x])
     #optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-    optimizer = tf.keras.optimizers.RMSprop(learning_rate=0.001)
+    optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
     model.compile(optimizer=optimizer,
                   metrics=['accuracy'],
                   loss='sparse_categorical_crossentropy')
@@ -460,24 +460,20 @@ def mlp(x, hidden_units, dropout_rate):
         x = Dropout(dropout_rate)(x)
     return x
 
-def cnn_visiontransformer(input_shape, number_of_classes):
+def cnn_visiontransformer(input_shape, number_of_classes, learning_rate=0.001):
     #implements the Vision Transformer (ViT) model by Alexey Dosovitskiy et al. 
     # for image classification, and demonstrates it on the CIFAR-100 dataset.
    
-    learning_rate = 0.001
-    weight_decay = 0.0001
-    batch_size = 256
-    num_epochs = 100
-    patch_size = (4,6)  # Size of the patches to be extract from the input images
+    patch_size = (8,8)  # Size of the patches to be extract from the input images
     num_patches = int((input_shape[0] / patch_size[0])*(input_shape[1] / patch_size[1])) 
-    projection_dim = 64
+    projection_dim = 16
     num_heads = 3
     transformer_units = [
         projection_dim * 2,
         projection_dim,
     ]  # Size of the transformer layers
     transformer_layers = 4
-    mlp_head_units = [256, 128]  # Size of the dense layers of the final classifier
+    mlp_head_units = [64]  # Size of the dense layers of the final classifier
 
     input = Input(shape=input_shape)
     x = input
@@ -505,7 +501,8 @@ def cnn_visiontransformer(input_shape, number_of_classes):
         encoded_patches = Add()([x3, x2])
 
     # Create a [batch_size, projection_dim] tensor.
-    representation = LayerNormalization(epsilon=1e-6)(encoded_patches)
+    representation= AveragePooling1D(3)(encoded_patches)
+    representation = LayerNormalization(epsilon=1e-6)(representation)
     representation = Flatten()(representation)
     representation = Dropout(0.5)(representation)
     # Add MLP.
@@ -514,7 +511,7 @@ def cnn_visiontransformer(input_shape, number_of_classes):
 
     x = Dense(number_of_classes, activation='softmax')(features)
     model = Model(inputs=[input], outputs=[x])
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     model.compile(optimizer=optimizer,
                   metrics=['accuracy'],
                   loss='sparse_categorical_crossentropy')
