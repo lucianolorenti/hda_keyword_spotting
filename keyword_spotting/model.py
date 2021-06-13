@@ -22,7 +22,21 @@ def ExpandDimension():
     return Lambda(lambda x: K.expand_dims(x))
 
 
-def cnn_residual_increasing_filters(input_shape,  number_of_classes, n_filters=32, n_residuals=3):
+class PerAudioAccuracy(tf.keras.metrics.Metric):
+
+  def __init__(self, name='posterior_accuracy', **kwargs):
+    super(PerAudioAccuracy, self).__init__(name=name, **kwargs)
+    self.ph_acc = self.add_weight(name='phacc', initializer='zeros')
+
+
+  def update_state(self, y_true, y_pred, sample_weight=None):
+    pass
+
+  def result(self):
+    return self.true_positives
+
+
+def cnn_residual_increasing_filters(input_shape,  number_of_classes, n_filters=32, n_residuals=3, learning_rate:float=None):
     """
     Deep residual learning for small-footprint keyword spotting.
     Tang, Raphael, and Jimmy Lin. 
@@ -81,11 +95,11 @@ def cnn_residual_increasing_filters(input_shape,  number_of_classes, n_filters=3
 
     x = GlobalAveragePooling2D()(x)
     x = Flatten()(x)
-    x = Dropout(0.5)(x)
+
     output = Dense(number_of_classes, activation='softmax', name='output', kernel_initializer='he_normal')(x)
 
     model = Model(inputs=[input], outputs=[output])
-    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     
     model.compile(optimizer=optimizer,
                   metrics=['accuracy'],

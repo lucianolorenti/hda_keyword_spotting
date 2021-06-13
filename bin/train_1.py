@@ -66,6 +66,8 @@ def load_data(dataset_path: Path):
     return X_train, X_val, X_test
 
 
+
+
 lables_dict = {l: i for i, l in enumerate(labels)}
 
 def dct(n_filters, n_input):
@@ -81,26 +83,12 @@ def dct(n_filters, n_input):
 
 dct_filters = dct(40, 40)
 
+def extract_features(sample_rate, signal, label):
+    return mfcc(signal, sample_rate, numcep=40, nfilt=40, nfft=512).astype('float32'), label
+
 def tf_extract_features(sample_rate, signal, label):
-    def process_file(sample_rate, signal, label):
-        data = librosa.feature.melspectrogram(
-            signal.astype(np.float32),
-            sr=sample_rate,
-            n_mels=40,
-            hop_length=sample_rate // 1000 * 10,
-            n_fft=480,
-            fmin=20,
-            fmax=4000,
-        )
-        data[data > 0] = np.log(data[data > 0])
-        data = [np.matmul(dct_filters, x) for x in np.split(data, data.shape[1], axis=1)]
-
-        data = np.array(data, order="F").astype(np.float32)      
-        return data.reshape(-1, 40), label
-        # return mfcc(signal, sample_rate, numcep=12, nfft=512).astype('float32'), label
-
     return tf.numpy_function(
-        process_file, [sample_rate, signal, label], [tf.float32, tf.int32]
+        extract_features, [sample_rate, signal, label], [tf.float32, tf.int32]
     )
 
 
@@ -163,10 +151,14 @@ def shapeify(x, y):
     x.set_shape([40, 40])
     y.set_shape([])
 
-  
-
-
     return x, y
+
+
+class MyCallback(tf.keras.callbacks.Callback):
+  def on_train_end(self, logs=None):
+    global training_finished
+    training_finished = True
+
 
 
 if __name__ == "__main__":
@@ -186,14 +178,14 @@ if __name__ == "__main__":
     X_train, X_val, X_test = load_data(data_path)
 
     ds_train = (
-        tf.data.Dataset.from_tensor_slices(X_train[:1000])
+        tf.data.Dataset.from_tensor_slices(X_train[:500])
         .map(tf_read_wav, num_parallel_calls=4)
         .apply(tf.data.experimental.ignore_errors())
         .map(tf_add_noise)
         .map(tf_extract_features, num_parallel_calls=4)
         .map(tf_windowed)
         .flat_map(split_window)
-        .shuffle(buffer_size=8000)
+        .shuffle(buffer_size=500)
         .map(shapeify)
         .prefetch(tf.data.AUTOTUNE)
     )
@@ -214,6 +206,11 @@ if __name__ == "__main__":
 
     batch_size = config["train"]["batch_size"]
 
+    callbacks = [EarlyStopping(patience=5)]
+
+    if config["train"]["reduce_on_plateau"]:
+        callbacks.append(ReduceLROnPlateau(patience=2, verbose=1, min_lr=0.00001))
+
     ds_val = (
         tf.data.Dataset.from_tensor_slices(X_val[:15])
         .map(tf_read_wav)
@@ -232,7 +229,7 @@ if __name__ == "__main__":
         validation_data=ds_val.batch(batch_size),
         epochs=epochs,
         # steps_per_epoch=asd // batch_size,
-        callbacks=[EarlyStopping(patience=5), ReduceLROnPlateau(patience=1, verbose=1)],
+        callbacks=callbacks,
     )
     total_time = time() - start
 
@@ -242,7 +239,7 @@ if __name__ == "__main__":
             label = Path(audio_file).resolve().parts[-2]
             label = lables_dict[label]
             sample_rate, signal = read_wav(audio_file)
-            data = keyword_extract_features(sample_rate, signal)
+            data = extract_features(sample_rate, signal)
             data, labels = windowed_(data, label)
             predicted = model.predict(data)
             results.append((audio_file, label, predicted))
