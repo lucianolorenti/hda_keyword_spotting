@@ -76,7 +76,7 @@ def cnn_residual_increasing_filters(input_shape,  number_of_classes, learning_ra
 
 
   
-    x = AveragePooling2D()(x)
+    x = GlobalAveragePooling2D()(x)
     x = Flatten()(x)
 
     output = Dense(number_of_classes, activation='softmax', name='output', kernel_initializer='he_normal')(x)
