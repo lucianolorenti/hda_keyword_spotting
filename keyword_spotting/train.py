@@ -11,9 +11,7 @@ from keyword_spotting.feature_extraction.utils import (
 )
 from keyword_spotting.feature_extraction.utils import read_wav, windowed
 from keyword_spotting.predictions import (
-    evaluate_perdictions,
     labels_dict,
-    predictions_per_song,
 )
 
 noise_files = [
@@ -113,23 +111,6 @@ def shapify_windowed(x, y):
     x.set_shape([40, 40])
     y.set_shape([])
     return x, y
-
-
-class PerAudioAccuracy(Callback):
-    def __init__(self, model, dataset):
-        self.model = model
-        self.dataset = dataset
-        self.data = []
-
-    def on_epoch_end(self, epoch, logs={}):
-        predictions = predictions_per_song(dataset=self.dataset, model=self.model)
-        preds, trues = evaluate_perdictions(predictions)
-        acc = accuracy_score(trues, preds)
-        self.data.append(acc)
-        print(acc)
-
-    def get(self, metrics, of_class):
-        return self.data
 
 
 def build_dataset_generator(

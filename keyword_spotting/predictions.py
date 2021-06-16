@@ -1,3 +1,4 @@
+
 from pathlib import Path
 import numpy as np
 from scipy import stats
@@ -109,11 +110,13 @@ def predictions_per_song(model, dataset):
 
     return results
 
+def label_from_file(audio_file:str)->int:
+    label = Path(audio_file).resolve().parts[-2]
+    return labels_dict[label]
 
-def evaluate_perdictions(predictions):
-    preds = []
-    trues = []
-    for _, real_label, labels_posteriors in predictions:
-        preds.extend((np.ones(labels_posteriors.shape[0])*real_label).astype('int'))
-        trues.extend(np.argmax(labels_posteriors,axis=1))    
-    return preds, trues
+def evaluate_predictions(predictions, data_path:Path):
+    from keyword_spotting.train import load_data
+    _, _, X_test = load_data(data_path)
+    y_pred = np.argmax(predictions, axis=1)
+    y_true = [label_from_file(file) for file in X_test]
+    return y_true, y_pred
