@@ -25,17 +25,46 @@ We evaluated our models using Google’s Speech CommandsDataset  [9],  which  wa
 The output of each must be post-processed
 
 \section{Signals and Features}
-The audio signals For  feature  extraction,   we  first  apply  a  band-pass  filterof  20Hz/4kHz  to  the  input  audio  to  reduce  noise.    For the speech regions, we generate acoustic features based on40-dimensional log-filterbank energies computed every 10 ms overa window of 25 ms. Contiguous frames are stacked to add sufficientleft and right context. The input window is asymmetric since eachadditional frame of future context adds 10 ms of latency to the sys-tem. For our Deep KWS system, we use 10 future frames and 30frames in the past.
+The audio signals For  feature  extraction,   we  first  apply  a  band-pass  filterof  20Hz/4kHz  to  the  input  audio  to  reduce  noise.    For the speech regions, we generate acoustic features based on 40-dimensional log-filterbank energies computed every 10 ms over a window of 25 ms. 
+    
+
+Contiguous frames are stacked to add sufficient left and right context. The input window is asymmetric since each additional frame of future context adds 10 ms of latency to the system. For our Deep KWS system, we use 10 future frames and 30frames in the past.
 
 
+Frames with size $40x40$
+
+No frames the every data has a a shape of 100x40
+NFFT=256, nfilt=40
+numcep=40, nfilt=nfilt, nfft=51
 
 \section{Learning Framework}
- models  are  compared  against  three  CNN  variantsproposed by Sainath and Parada\cite{sainath2015convolutional}, named trad-fpool3, which is their base model   The accuracies of these models are shown in Table 4,which  also  shows  the  95%  confidence  intervals  from  fivedifferent optimization trials with different random seeds. Thetable  provides  the  number  of  model  parameters  as  well  asthe number of multiplies in an inference pass.   
-
+ 
+ Basically we used two different approaches, one based on a Residual Neural Network (ResNet) proposed by Sainath \cite{sainath2013deep}, \cite{tang2018deep} and the other based on a Vision Transformer (ViT) model proposed by Alexey Dosovitskiy et al. [cite].
 
 
 \subsection{Residual layers}
 In par-ticular, we explore the use of residual learning techniques anddilated convolutions.
 
-\subsection{Attention layers}
-\subsection{Inception-like layers}
+
+\subsection{Transformer layers}
+
+Dosovitskiy et al. introduced the Vision Transformer (ViT) [2] and showed that Transformers can learn high-level image features by computing self-attention between different image patches. 	
+
+Transformers were proposed by Vaswani et al. (2017) for machine translation, and have since become the state of the art method in many NLP tasks.
+	 	 	 		
+Alexey Dosovitskiy et al. created the ViT model for image classification using the Transformer architecture with self-attention to sequences of image patches, without using convolution layers.
+	
+ To apply this approach in our scenario, we split an audio signal into fixed\-size patches, linearly embed each of them, add position embeddings, and feed the resulting sequence of vectors to a standard Transformer encoder. In order to perform classification, we use the standard approach of adding an extra learnable "classification token" to the sequence.
+
+
+An investigation into the application of the Transformer architecture to keyword spotting, finding that applying self-attention is more effective in the time domain than in the frequency domain.
+
+
+
+\subsection{Experimental Setup}
+
+The Speech Commands Dataset wassplit into training, validation, and test sets, with 80\% training,10\% validation, and 10\% test.
+
+To generate training data, we followed Google’s preprocessingprocedure by adding background noise to eachsample with a probability of 0:8. The noise is chosen randomly from the background noises providedin the dataset. After evaluated different ratios of noise to add an every signal, we defined a ratio of 0.4 in order that a human ear can still listening the recorded commands with some background noise. 
+
+For evaluate the models we use the accuracy metric and also we compute the total time used for training the models.
