@@ -6,33 +6,47 @@ from tcn import TCN
 from tensorflow import keras
 from tensorflow.keras import Model
 from tensorflow.python.keras import backend as K
-from tensorflow.python.keras.layers import (GRU, Activation, Add,
-                                            AveragePooling1D, AveragePooling2D,
-                                            BatchNormalization, Bidirectional,
-                                            Concatenate, Conv2D, Dense, Dot,
-                                            Dropout, Embedding, Flatten,
-                                            GlobalAveragePooling2D, Input,
-                                            Lambda, Layer, LayerNormalization,
-                                            MultiHeadAttention, Reshape,
-                                            Softmax, SpatialDropout2D)
+from tensorflow.python.keras.layers import (
+    GRU,
+    Activation,
+    Add,
+    AveragePooling1D,
+    AveragePooling2D,
+    BatchNormalization,
+    Bidirectional,
+    Concatenate,
+    Conv2D,
+    Dense,
+    Dot,
+    Dropout,
+    Embedding,
+    Flatten,
+    GlobalAveragePooling2D,
+    Input,
+    Lambda,
+    Layer,
+    LayerNormalization,
+    MultiHeadAttention,
+    Reshape,
+    Softmax,
+    SpatialDropout2D,
+)
 from tensorflow.python.ops import math_ops
 
-from keyword_spotting.predictions import (evaluate_perdictions,
-                                          predictions_per_song)
+
 
 
 def ExpandDimension():
     return Lambda(lambda x: K.expand_dims(x))
 
 
-
-
-
-def cnn_residual_increasing_filters(input_shape,  number_of_classes, learning_rate=0.001, n_filters=32, n_residuals=3):
+def cnn_residual_increasing_filters(
+    input_shape, number_of_classes, learning_rate=0.001, n_filters=32, n_residuals=3
+):
 
     """
     Deep residual learning for small-footprint keyword spotting.
-    Tang, Raphael, and Jimmy Lin. 
+    Tang, Raphael, and Jimmy Lin.
     """
     input = Input(shape=input_shape)
     x = input
@@ -42,51 +56,62 @@ def cnn_residual_increasing_filters(input_shape,  number_of_classes, learning_ra
 
     x = ExpandDimension()(x)
 
-    i= 1
-    x = Conv2D(filters=n_filters,
-            strides=(1, 1),
-            kernel_size=(3, 3),
-            #dilation_rate=int(2**(i // 3)),
-            padding='valid',
-            use_bias=True)(x)    
-    x = AveragePooling2D((2,2))(x)
+    i = 1
+    x = Conv2D(
+        filters=n_filters,
+        strides=(1, 1),
+        kernel_size=(3, 3),
+        # dilation_rate=int(2**(i // 3)),
+        padding="valid",
+        use_bias=True,
+    )(x)
+    x = AveragePooling2D((2, 2))(x)
     i = -1
     for j in range(n_residuals):
-        i+=1
-        original_x = x 
-        x = Conv2D(filters=n_filters,
-                   strides=(1, 1),
-                   kernel_size=(3, 3),
-                   dilation_rate=int(2**(i // 3)),
-                   padding='same',
-                   use_bias=False)(x)
-        x = Activation('relu')(x)
+        i += 1
+        original_x = x
+        x = Conv2D(
+            filters=n_filters,
+            strides=(1, 1),
+            kernel_size=(3, 3),
+            dilation_rate=int(2 ** (i // 3)),
+            padding="same",
+            use_bias=False,
+        )(x)
+        x = Activation("relu")(x)
         x = BatchNormalization()(x)
-        i+=1
-        x = Conv2D(filters=n_filters,
-                   strides=(1, 1),
-                   kernel_size=(3, 3),
-                   dilation_rate=int(2**(i // 3)),
-                   padding='same',
-                   use_bias=False)(x)
-        x = Activation('relu')(x)
+        i += 1
+        x = Conv2D(
+            filters=n_filters,
+            strides=(1, 1),
+            kernel_size=(3, 3),
+            dilation_rate=int(2 ** (i // 3)),
+            padding="same",
+            use_bias=False,
+        )(x)
+        x = Activation("relu")(x)
         x = BatchNormalization()(x)
 
         x = Add()([original_x, x])
 
-
-  
     x = GlobalAveragePooling2D()(x)
     x = Flatten()(x)
 
-    output = Dense(number_of_classes, activation='softmax', name='output', kernel_initializer='he_normal')(x)
+    output = Dense(
+        number_of_classes,
+        activation="softmax",
+        name="output",
+        kernel_initializer="he_normal",
+    )(x)
 
     model = Model(inputs=[input], outputs=[output])
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-    
-    model.compile(optimizer=optimizer,
-                  metrics=['accuracy'],
-                  loss='sparse_categorical_crossentropy')
+
+    model.compile(
+        optimizer=optimizer,
+        metrics=["accuracy"],
+        loss="sparse_categorical_crossentropy",
+    )
     return model
 
 
@@ -104,41 +129,31 @@ def cnn_residual(input_shape, number_of_classes):
 
     x = ExpandDimension()(x)
     identity = x
-    identity = Conv2D(64,
-                      strides=(1, 3),
-                      kernel_size=(1, 1),
-                      padding='same',
-                      use_bias=False)(x)
+    identity = Conv2D(
+        64, strides=(1, 3), kernel_size=(1, 1), padding="same", use_bias=False
+    )(x)
 
-    x = Conv2D(64,
-               strides=(1, 3),
-               kernel_size=(20, 8),
-               padding='same',
-               use_bias=False)(x)
+    x = Conv2D(64, strides=(1, 3), kernel_size=(20, 8), padding="same", use_bias=False)(
+        x
+    )
 
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
+    x = Activation("relu")(x)
 
-    x = Conv2D(64,
-               strides=(1, 1),
-               kernel_size=(10, 4),
-               padding='same',
-               use_bias=False)(x)
+    x = Conv2D(64, strides=(1, 1), kernel_size=(10, 4), padding="same", use_bias=False)(
+        x
+    )
 
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
+    x = Activation("relu")(x)
 
     x = Add()([x, identity])
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2D(64,
-               strides=(1, 1),
-               kernel_size=(1, 1),
-               padding='same',
-               use_bias=True)(x)
+    x = Activation("relu")(x)
+    x = Conv2D(64, strides=(1, 1), kernel_size=(1, 1), padding="same", use_bias=True)(x)
 
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
+    x = Activation("relu")(x)
 
     x = Flatten()(x)
 
@@ -146,15 +161,17 @@ def cnn_residual(input_shape, number_of_classes):
     x = BatchNormalization()(x)
     x = Dense(128)(x)
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
+    x = Activation("relu")(x)
 
-    output = Dense(number_of_classes, activation='softmax', name='output')(x)
+    output = Dense(number_of_classes, activation="softmax", name="output")(x)
 
     model = Model(inputs=[input], outputs=[output])
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-    model.compile(optimizer=optimizer,
-                  metrics=['accuracy'],
-                  loss='sparse_categorical_crossentropy')
+    model.compile(
+        optimizer=optimizer,
+        metrics=["accuracy"],
+        loss="sparse_categorical_crossentropy",
+    )
     return model
 
 
@@ -172,24 +189,20 @@ def cnn_attention(input_shape, number_of_classes):
 
     x = ExpandDimension()(x)
 
-    x = Conv2D(64,
-               strides=(1, 3),
-               kernel_size=(20, 8),
-               padding='same',
-               use_bias=False)(x)
+    x = Conv2D(64, strides=(1, 3), kernel_size=(20, 8), padding="same", use_bias=False)(
+        x
+    )
 
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2D(64,
-               strides=(1, 1),
-               kernel_size=(10, 4),
-               padding='same',
-               use_bias=False)(x)
+    x = Activation("relu")(x)
+    x = Conv2D(64, strides=(1, 1), kernel_size=(10, 4), padding="same", use_bias=False)(
+        x
+    )
 
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
+    x = Activation("relu")(x)
 
-    x = Reshape((x.shape[1], x.shape[2]*x.shape[3]))(x)
+    x = Reshape((x.shape[1], x.shape[2] * x.shape[3]))(x)
     new_shape = x.shape
 
     xFirst = Lambda(lambda q: q[:, -1])(x)  # [b_s, vec_dim]
@@ -197,25 +210,27 @@ def cnn_attention(input_shape, number_of_classes):
 
     # dot product attention
     attScores = Dot(axes=[1, 2])([query, x])
-    attScores = Softmax(name='attSoftmax')(attScores)  # [b_s, seq_len]
+    attScores = Softmax(name="attSoftmax")(attScores)  # [b_s, seq_len]
 
     # rescale sequence
     attVector = Dot(axes=[1, 1])([attScores, x])  # [b_s, vec_dim]
 
     x = Dense(64)(attVector)
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
+    x = Activation("relu")(x)
     x = Dense(32)(x)
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
+    x = Activation("relu")(x)
 
-    output = Dense(number_of_classes, activation='softmax', name='output')(x)
+    output = Dense(number_of_classes, activation="softmax", name="output")(x)
 
     model = Model(inputs=[input], outputs=[output])
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-    model.compile(optimizer=optimizer,
-                  metrics=['accuracy'],
-                  loss='sparse_categorical_crossentropy')
+    model.compile(
+        optimizer=optimizer,
+        metrics=["accuracy"],
+        loss="sparse_categorical_crossentropy",
+    )
     return model
 
 
@@ -227,23 +242,35 @@ def simple_tcn(input_shape, number_of_classes):
     input = Input(shape=input_shape)
     x = input
 
-    x = TCN(64, dilations=[1, 2, 4, 8, 16, 32],
-            return_sequences=True, use_batch_norm=True, use_skip_connections=True)(x)
-    x = TCN(64, dilations=[1, 2, 4, 8, 16, 32],
-            return_sequences=True, use_batch_norm=True, use_skip_connections=True)(x)
+    x = TCN(
+        64,
+        dilations=[1, 2, 4, 8, 16, 32],
+        return_sequences=True,
+        use_batch_norm=True,
+        use_skip_connections=True,
+    )(x)
+    x = TCN(
+        64,
+        dilations=[1, 2, 4, 8, 16, 32],
+        return_sequences=True,
+        use_batch_norm=True,
+        use_skip_connections=True,
+    )(x)
     x = Flatten()(x)
     x = Dense(32)(x)
     x = BatchNormalization()(x)
     x = Dense(128)(x)
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    output = Dense(number_of_classes, activation='softmax', name='output')(x)
+    x = Activation("relu")(x)
+    output = Dense(number_of_classes, activation="softmax", name="output")(x)
 
     model = Model(inputs=[input], outputs=[output])
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-    model.compile(optimizer=optimizer,
-                  metrics=['accuracy'],
-                  loss='sparse_categorical_crossentropy')
+    model.compile(
+        optimizer=optimizer,
+        metrics=["accuracy"],
+        loss="sparse_categorical_crossentropy",
+    )
     return model
 
 
@@ -256,60 +283,66 @@ def cnn_inception(input_shape, number_of_classes, n_filters=16, sizes=[5, 10, 15
     x = input
     x = ExpandDimension()(x)
 
-    x1 = Conv2D(n_filters,
-                strides=(1, 3),
-                kernel_size=(sizes[0], 16),
-                padding='same',
-                activation='relu',
-                use_bias=False)(x)
+    x1 = Conv2D(
+        n_filters,
+        strides=(1, 3),
+        kernel_size=(sizes[0], 16),
+        padding="same",
+        activation="relu",
+        use_bias=False,
+    )(x)
 
-    x2 = Conv2D(n_filters,
-                strides=(1, 3),
-                kernel_size=(sizes[1], 8),
-                padding='same',
-                activation='relu',
-                use_bias=False)(x)
+    x2 = Conv2D(
+        n_filters,
+        strides=(1, 3),
+        kernel_size=(sizes[1], 8),
+        padding="same",
+        activation="relu",
+        use_bias=False,
+    )(x)
 
-    x3 = Conv2D(n_filters,
-                strides=(1, 3),
-                kernel_size=(sizes[2], 4),
-                padding='same',
-                activation='relu',
-                use_bias=False)(x)
+    x3 = Conv2D(
+        n_filters,
+        strides=(1, 3),
+        kernel_size=(sizes[2], 4),
+        padding="same",
+        activation="relu",
+        use_bias=False,
+    )(x)
     x = Concatenate()([x1, x2, x3])
 
-    x = Conv2D(64,
-               strides=(1, 1),
-               kernel_size=(10, 4),
-               padding='same',
-               use_bias=False)(x)
+    x = Conv2D(64, strides=(1, 1), kernel_size=(10, 4), padding="same", use_bias=False)(
+        x
+    )
 
-    x = Conv2D(64,
-               strides=(1, 1),
-               kernel_size=(10, 4),
-               padding='same',
-               use_bias=False)(x)
+    x = Conv2D(64, strides=(1, 1), kernel_size=(10, 4), padding="same", use_bias=False)(
+        x
+    )
 
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
+    x = Activation("relu")(x)
 
     x = Flatten()(x)
     x = Dense(32)(x)
     x = BatchNormalization()(x)
     x = Dense(128)(x)
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dense(number_of_classes, activation='softmax')(x)
+    x = Activation("relu")(x)
+    x = Dense(number_of_classes, activation="softmax")(x)
     model = Model(inputs=[input], outputs=[x])
-    #optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    # optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
     optimizer = tf.keras.optimizers.RMSprop(learning_rate=0.001)
-    model.compile(optimizer=optimizer,
-                  metrics=['accuracy'],
-                  loss='sparse_categorical_crossentropy')
+    model.compile(
+        optimizer=optimizer,
+        metrics=["accuracy"],
+        loss="sparse_categorical_crossentropy",
+    )
     return model
 
 
-def cnn_inception2(input_shape, number_of_classes, learnig_rate=0.001, n_filters=16, sizes=[5, 10, 15]):
+def cnn_inception2(
+    input_shape, number_of_classes, learnig_rate=0.001, n_filters=16, sizes=[5, 10, 15]
+):
     """
     Convolutional Neural Networks for Small-footprint Keyword Spotting
     Tara N. Sainath, Carolina Parada
@@ -318,48 +351,60 @@ def cnn_inception2(input_shape, number_of_classes, learnig_rate=0.001, n_filters
     x = input
     x = ExpandDimension()(x)
 
-    x1 = Conv2D(n_filters,
-                strides=(1, 3),
-                kernel_size=(sizes[0], 16),
-                padding='same',
-                activation='relu',
-                use_bias=False)(x)
+    x1 = Conv2D(
+        n_filters,
+        strides=(1, 3),
+        kernel_size=(sizes[0], 16),
+        padding="same",
+        activation="relu",
+        use_bias=False,
+    )(x)
 
-    x2 = Conv2D(n_filters,
-                strides=(1, 3),
-                kernel_size=(sizes[1], 8),
-                padding='same',
-                activation='relu',
-                use_bias=False)(x)
+    x2 = Conv2D(
+        n_filters,
+        strides=(1, 3),
+        kernel_size=(sizes[1], 8),
+        padding="same",
+        activation="relu",
+        use_bias=False,
+    )(x)
 
-    x3 = Conv2D(n_filters,
-                strides=(1, 3),
-                kernel_size=(sizes[2], 4),
-                padding='same',
-                activation='relu',
-                use_bias=False)(x)
+    x3 = Conv2D(
+        n_filters,
+        strides=(1, 3),
+        kernel_size=(sizes[2], 4),
+        padding="same",
+        activation="relu",
+        use_bias=False,
+    )(x)
     x = Concatenate()([x1, x2, x3])
 
-    x1 = Conv2D(n_filters,
-                strides=(1, 1),
-                kernel_size=(5, 4),
-                padding='same',
-                activation='relu',
-                use_bias=False)(x)
+    x1 = Conv2D(
+        n_filters,
+        strides=(1, 1),
+        kernel_size=(5, 4),
+        padding="same",
+        activation="relu",
+        use_bias=False,
+    )(x)
 
-    x2 = Conv2D(n_filters,
-                strides=(1, 1),
-                kernel_size=(10, 4),
-                padding='same',
-                activation='relu',
-                use_bias=False)(x)
+    x2 = Conv2D(
+        n_filters,
+        strides=(1, 1),
+        kernel_size=(10, 4),
+        padding="same",
+        activation="relu",
+        use_bias=False,
+    )(x)
 
-    x3 = Conv2D(n_filters,
-                strides=(1, 1),
-                kernel_size=(15, 4),
-                padding='same',
-                activation='relu',
-                use_bias=False)(x)
+    x3 = Conv2D(
+        n_filters,
+        strides=(1, 1),
+        kernel_size=(15, 4),
+        padding="same",
+        activation="relu",
+        use_bias=False,
+    )(x)
 
     x = Concatenate()([x1, x2, x3])
 
@@ -368,14 +413,16 @@ def cnn_inception2(input_shape, number_of_classes, learnig_rate=0.001, n_filters
     x = BatchNormalization()(x)
     x = Dense(128)(x)
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dense(number_of_classes, activation='softmax')(x)
+    x = Activation("relu")(x)
+    x = Dense(number_of_classes, activation="softmax")(x)
     model = Model(inputs=[input], outputs=[x])
-    #optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    # optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
     optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
-    model.compile(optimizer=optimizer,
-                  metrics=['accuracy'],
-                  loss='sparse_categorical_crossentropy')
+    model.compile(
+        optimizer=optimizer,
+        metrics=["accuracy"],
+        loss="sparse_categorical_crossentropy",
+    )
     return model
 
 
@@ -388,36 +435,35 @@ def cnn_trad_fpool3(input_shape, number_of_classes):
     x = input
     x = ExpandDimension()(x)
 
-    x = Conv2D(64,
-               strides=(1, 3),
-               kernel_size=(20, 8),
-               padding='same',
-               use_bias=False)(x)
+    x = Conv2D(64, strides=(1, 3), kernel_size=(20, 8), padding="same", use_bias=False)(
+        x
+    )
 
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2D(64,
-               strides=(1, 1),
-               kernel_size=(10, 4),
-               padding='same',
-               use_bias=False)(x)
+    x = Activation("relu")(x)
+    x = Conv2D(64, strides=(1, 1), kernel_size=(10, 4), padding="same", use_bias=False)(
+        x
+    )
 
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
+    x = Activation("relu")(x)
 
     x = Flatten()(x)
     x = Dense(32)(x)
     x = BatchNormalization()(x)
     x = Dense(128)(x)
     x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dense(number_of_classes, activation='softmax')(x)
+    x = Activation("relu")(x)
+    x = Dense(number_of_classes, activation="softmax")(x)
     model = Model(inputs=[input], outputs=[x])
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-    model.compile(optimizer=optimizer,
-                  metrics=['accuracy'],
-                  loss='sparse_categorical_crossentropy')
+    model.compile(
+        optimizer=optimizer,
+        metrics=["accuracy"],
+        loss="sparse_categorical_crossentropy",
+    )
     return model
+
 
 class PatchEncoder(Layer):
     def __init__(self, num_patches, projection_dim):
@@ -432,6 +478,7 @@ class PatchEncoder(Layer):
         positions = tf.range(start=0, limit=self.num_patches, delta=1)
         encoded = self.projection(patch) + self.position_embedding(positions)
         return encoded
+
 
 class Patches(Layer):
     def __init__(self, patch_size):
@@ -451,24 +498,41 @@ class Patches(Layer):
         patches = tf.reshape(patches, [batch_size, -1, patch_dims])
         return patches
 
+
 def mlp(x, hidden_units, dropout_rate):
     for units in hidden_units:
         x = Dense(units, activation=tf.nn.gelu)(x)
-        x = Dropout(dropout_rate)(x)
+        #x = Dropout(dropout_rate)(x)
     return x
 
-def cnn_visiontransformer(input_shape, number_of_classes, learning_rate=0.001, n_dense_layer=1, num_heads = 3, transformer_layers = 4, projection_dim = 16, patch_x=8, patch_y=8):
-    #implements the Vision Transformer (ViT) model by Alexey Dosovitskiy et al. 
+
+def cnn_visiontransformer(
+    input_shape,
+    number_of_classes,
+    learning_rate=0.001,
+    n_dense_layer=1,
+    num_heads=3,
+    transformer_layers=4,
+    projection_dim=16,
+    patch_x=8,
+    patch_y=8,
+    dense_dropout=0.5
+):
+    # implements the Vision Transformer (ViT) model by Alexey Dosovitskiy et al.
     # for image classification, and demonstrates it on the CIFAR-100 dataset.
-   
-    patch_size = (patch_x,patch_y)  # Size of the patches to be extract from the input images
-    num_patches = int((input_shape[0] / patch_size[0])*(input_shape[1] / patch_size[1])) 
+
+    patch_size = (
+        patch_x,
+        patch_y,
+    )  # Size of the patches to be extract from the input images
+    num_patches = int(
+        (input_shape[0] / patch_size[0]) * (input_shape[1] / patch_size[1])
+    )
 
     transformer_units = [
         projection_dim * 2,
         projection_dim,
     ]  # Size of the transformer layers
-    
 
     input = Input(shape=input_shape)
     x = input
@@ -496,33 +560,36 @@ def cnn_visiontransformer(input_shape, number_of_classes, learning_rate=0.001, n
         encoded_patches = Add()([x3, x2])
 
     # Create a [batch_size, projection_dim] tensor.
-    representation= AveragePooling1D(3)(encoded_patches)
+    representation = AveragePooling1D(3)(encoded_patches)
     representation = LayerNormalization(epsilon=1e-6)(representation)
     representation = Flatten()(representation)
-    representation = Dropout(0.5)(representation)
+    #representation = Dropout(dense_dropout)(representation)
     # Add MLP.
     x = representation
     for units in range(n_dense_layer):
-        x = Dense(int(x.shape[1]/4), activation=tf.nn.gelu)(x)
-        x = Dropout(0.5)(x)
+        x = Dense(int(x.shape[1] / 2), activation=tf.nn.gelu)(x)
+        #x = Dropout(dense_dropout)(x)
     features = x
     # Classify outputs.
 
-    x = Dense(number_of_classes, activation='softmax')(features)
+    x = Dense(number_of_classes, activation="softmax")(features)
     model = Model(inputs=[input], outputs=[x])
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-    model.compile(optimizer=optimizer,
-                  metrics=['accuracy'],
-                  loss='sparse_categorical_crossentropy')
+    model.compile(
+        optimizer=optimizer,
+        metrics=["accuracy"],
+        loss="sparse_categorical_crossentropy",
+    )
     return model
 
+
 models = {
-    'cnn_trad_fpool3': cnn_trad_fpool3,
-    'simple_tcn': simple_tcn,
-    'cnn_attention': cnn_attention,
-    'cnn_residual': cnn_residual,
-    'cnn_inception': cnn_inception,
-    'cnn_residual2': cnn_residual_increasing_filters, 
-    'cnn_inception2': cnn_inception2,
-    'cnn_visiontransformer':cnn_visiontransformer, 
+    "cnn_trad_fpool3": cnn_trad_fpool3,
+    "simple_tcn": simple_tcn,
+    "cnn_attention": cnn_attention,
+    "cnn_residual": cnn_residual,
+    "cnn_inception": cnn_inception,
+    "cnn_residual2": cnn_residual_increasing_filters,
+    "cnn_inception2": cnn_inception2,
+    "cnn_visiontransformer": cnn_visiontransformer,
 }
