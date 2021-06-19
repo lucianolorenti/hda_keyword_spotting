@@ -8,12 +8,11 @@ from time import time
 import yaml
 from keyword_spotting.model import cnn_inception2, models
 from keyword_spotting.predictions import (
-    evaluate_perdictions,
     labels,
-    labels_dict,
     predictions_per_song,
 )
-from keyword_spotting.train import PerAudioAccuracy, build_dataset_generator, load_data
+from keyword_spotting.train import  build_dataset_generator, load_data
+from keyword_spotting.predictions import PerAudioAccuracy
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 logging.basicConfig()
@@ -68,7 +67,7 @@ if __name__ == "__main__":
         callbacks.append(ReduceLROnPlateau(patience=2, verbose=1, min_lr=0.00001))
 
     if config["model"]["windowed"]:
-        callbacks.append(PerAudioAccuracy(model, X_val))
+        callbacks.append(PerAudioAccuracy(model, X_val, data_path))
     ds_val = build_dataset_generator(
         X_val, data_path, config["model"]["windowed"], noise=False, shuffle=False
     )
@@ -80,6 +79,7 @@ if __name__ == "__main__":
         epochs=epochs,
         # steps_per_epoch=asd // batch_size,
         callbacks=callbacks,
+        
     )
     total_time = time() - start
     model.save_weights(str(model_path))

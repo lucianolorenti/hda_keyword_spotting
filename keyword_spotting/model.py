@@ -1,6 +1,5 @@
 import numpy as np
 import tensorflow as tf
-import tensorflow_addons as tfa
 from sklearn.metrics import accuracy_score
 from tcn import TCN
 from tensorflow import keras

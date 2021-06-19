@@ -1,8 +1,13 @@
 
 from pathlib import Path
+
 import numpy as np
 from scipy import stats
-from keyword_spotting.feature_extraction.utils import extract_features, read_wav, windowed
+from sklearn.metrics import accuracy_score
+from tensorflow.python.keras.callbacks import Callback
+
+from keyword_spotting.feature_extraction.utils import (extract_features,
+                                                       read_wav, windowed)
 
 labels = [
     "yes",
@@ -120,3 +125,22 @@ def evaluate_predictions(predictions, data_path:Path):
     y_pred = np.argmax(predictions, axis=1)
     y_true = [label_from_file(file) for file in X_test]
     return y_true, y_pred
+
+
+
+class PerAudioAccuracy(Callback):
+    def __init__(self, model, dataset, data_path):
+        self.model = model
+        self.dataset = dataset
+        self.data = []
+        self.data_path = data_path
+
+    def on_epoch_end(self, epoch, logs={}):
+        predictions = predictions_per_song(dataset=self.dataset, model=self.model)
+        preds, trues = evaluate_predictions(predictions, self.data_path)
+        acc = accuracy_score(trues, preds)
+        self.data.append(acc)
+        print(acc)
+
+    def get(self, metrics, of_class):
+        return self.data
