@@ -46,6 +46,23 @@ numcep=40, nfilt=nfilt, nfft=51
 In particular, we explore the use of residual learning techniques anddilated convolutions.
 
 
+\begin{table}
+	\centering
+	\begin{tabular}{|l|l|l|l|}
+    \hline
+    name & residuals  & filters & total parameters \\
+    \hline
+    res3 & 3 & 19 & 20,380 \\
+    \hline
+    res6 & 6 & 19 & 40,330 \\
+    \hline
+    res9 & 9 & 19 & 60,280 \\
+    \hline
+    \end{tabular} 
+\label{table:results}
+\caption{Parameters of the ResNet models}
+\end{table}
+
 \subsection{Transformer layers}
 
 Dosovitskiy et al. introduced the Vision Transformer (ViT) [2] and showed that Transformers can learn high-level image features by computing self-attention between different image patches. 	
@@ -59,6 +76,22 @@ Alexey Dosovitskiy et al. created the ViT model for image classification using t
 
 An investigation into the application of the Transformer architecture to keyword spotting, finding that applying self-attention is more effective in the time domain than in the frequency domain.
 
+\begin{table}
+	\centering
+	\begin{tabular}{|l|l|l|l|}
+    \hline
+    name & patches  & projection dim &  total parameters \\
+    \hline
+    vit5x4 & 5x4 & 20 & 20xxx \\
+    \hline
+    vit10x8 & 10x8 & 20 & 20xxx \\
+    \hline
+    vit20x10 & 20x10 & 20 & 20xxx \\
+    \hline
+    \end{tabular} 
+\label{table:results}
+\caption{Parameters of the Transformer models}
+\end{table}
 
 
 \subsection{Experimental Setup}
