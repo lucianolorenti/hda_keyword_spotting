@@ -16,6 +16,7 @@ setup(name='KeywordSpotter',
           'scipy',
           'scikit-learn',
           'librosa',
-          'tensorflow_addons'
+          'tensorflow_addons',
+          'simpleaudio'
       ],
       )

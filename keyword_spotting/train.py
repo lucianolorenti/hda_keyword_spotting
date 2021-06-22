@@ -1,3 +1,4 @@
+from keyword_spotting.utils import add_noise
 import pickle
 from pathlib import Path
 
@@ -13,26 +14,9 @@ from keyword_spotting.predictions import (
     labels_dict,
 )
 
-noise_files = [
-    "doing_the_dishes.wav",
-    "dude_miaowing.wav",
-    "exercise_bike.wav",
-    "pink_noise.wav",
-    "running_tap.wav",
-    "white_noise.wav",
-]
 
 
-def add_noise(sample_rate, signal, dataset_path: Path):
-    if np.random.rand() > 0.8:
-        noise_path = dataset_path / "_background_noise_" / np.random.choice(noise_files)
-        fs, data_noise = read_wav(noise_path)
-        min_length = min(data_noise.shape[0], signal.shape[0])
-        noise_factor = np.random.rand() * 0.1
-        signal[:min_length] = (
-            signal[:min_length] + noise_factor * data_noise[:min_length]
-        )
-    return sample_rate, signal
+
 
 
 def create_data_path(dataset_path: Path, data):

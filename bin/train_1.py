@@ -6,7 +6,7 @@ from pathlib import Path
 from time import time
 
 import yaml
-from keyword_spotting.model import cnn_inception2, models
+from keyword_spotting.model import  models
 from keyword_spotting.predictions import (
     labels,
     predictions_per_song,

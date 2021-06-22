@@ -1,8 +1,7 @@
-import numpy as np
+
 import tensorflow as tf
-from sklearn.metrics import accuracy_score
-from tcn import TCN
-from tensorflow import keras
+
+
 from tensorflow.keras import Model
 from tensorflow.python.keras import backend as K
 from tensorflow.python.keras.layers import (
@@ -10,10 +9,10 @@ from tensorflow.python.keras.layers import (
     Activation,
     Add,
     AveragePooling1D,
-    AveragePooling2D,
+
     BatchNormalization,
     Bidirectional,
-    Concatenate,
+
     Conv2D,
     Dense,
     Dot,
@@ -31,6 +30,7 @@ from tensorflow.python.keras.layers import (
     SpatialDropout2D,
     GlobalAveragePooling1D,
 )
+from tensorflow.python.keras.layers.pooling import AveragePooling2D
 from tensorflow.python.ops import math_ops
 
 
@@ -113,90 +113,6 @@ def cnn_residual_increasing_filters(
     return model
 
 
-def cnn_inception2(
-    input_shape, number_of_classes, learnig_rate=0.001, n_filters=16, sizes=[5, 10, 15]
-):
-    """
-    Convolutional Neural Networks for Small-footprint Keyword Spotting
-    Tara N. Sainath, Carolina Parada
-    """
-    input = Input(shape=input_shape)
-    x = input
-    x = ExpandDimension()(x)
-
-    x1 = Conv2D(
-        n_filters,
-        strides=(1, 3),
-        kernel_size=(sizes[0], 16),
-        padding="same",
-        activation="relu",
-        use_bias=False,
-    )(x)
-
-    x2 = Conv2D(
-        n_filters,
-        strides=(1, 3),
-        kernel_size=(sizes[1], 8),
-        padding="same",
-        activation="relu",
-        use_bias=False,
-    )(x)
-
-    x3 = Conv2D(
-        n_filters,
-        strides=(1, 3),
-        kernel_size=(sizes[2], 4),
-        padding="same",
-        activation="relu",
-        use_bias=False,
-    )(x)
-    x = Concatenate()([x1, x2, x3])
-
-    x1 = Conv2D(
-        n_filters,
-        strides=(1, 1),
-        kernel_size=(5, 4),
-        padding="same",
-        activation="relu",
-        use_bias=False,
-    )(x)
-
-    x2 = Conv2D(
-        n_filters,
-        strides=(1, 1),
-        kernel_size=(10, 4),
-        padding="same",
-        activation="relu",
-        use_bias=False,
-    )(x)
-
-    x3 = Conv2D(
-        n_filters,
-        strides=(1, 1),
-        kernel_size=(15, 4),
-        padding="same",
-        activation="relu",
-        use_bias=False,
-    )(x)
-
-    x = Concatenate()([x1, x2, x3])
-
-    x = Flatten()(x)
-    x = Dense(32)(x)
-    x = BatchNormalization()(x)
-    x = Dense(128)(x)
-    x = BatchNormalization()(x)
-    x = Activation("relu")(x)
-    x = Dense(number_of_classes, activation="softmax")(x)
-    model = Model(inputs=[input], outputs=[x])
-    # optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-    optimizer = tf.keras.optimizers.RMSprop(learning_rate=learning_rate)
-    model.compile(
-        optimizer=optimizer,
-        metrics=["accuracy"],
-        loss="sparse_categorical_crossentropy",
-    )
-    return model
 
 
 class PatchEncoder(Layer):
@@ -280,13 +196,12 @@ def cnn_visiontransformer(
     patches = Patches(patch_size)(x)
     encoded_patches = PatchEncoder(num_patches, projection_dim)(patches)
 
-    # Create multiple layers of the Transformer block.
     for _ in range(transformer_layers):
 
         x1 = BatchNormalization()(encoded_patches)
 
         attention_output = MultiHeadAttention(
-            num_heads=num_heads, key_dim=projection_dim, dropout=0.1
+            num_heads=num_heads, key_dim=projection_dim
         )(x1, x1)
 
         x2 = Add()([attention_output, encoded_patches])
@@ -295,27 +210,24 @@ def cnn_visiontransformer(
 
         for units in transformer_units:
             x3 = Dense(units, activation=tf.nn.gelu)(x3)
-            x3 = Dropout(0.1)(x3)
 
         # Skip connection 2.
         encoded_patches = Add()([x3, x2])
 
     # Create a [batch_size, projection_dim] tensor.
-    representation = GlobalAveragePooling1D()(encoded_patches)
-    representation = LayerNormalization(epsilon=1e-6)(representation)
+    #representation = GlobalAveragePooling1D()(encoded_patches)
+    representation = LayerNormalization(epsilon=1e-6)(encoded_patches)
     representation = Flatten()(representation)
     # representation = Dropout(dense_dropout)(representation)
     # Add MLP.
     x = representation
     for units in range(n_dense_layer):
-        x = Dense(int(x.shape[1] / 2), activation=tf.nn.gelu)(x)
-        x = Dropout(0.1)(x)
+        x = Dense(max(int(x.shape[1] / 2),number_of_classes), activation=tf.nn.gelu)(x)
 
     x = Dense(number_of_classes, activation="softmax")(x)
     model = Model(inputs=[input], outputs=[x])
-    import tensorflow_addons as tfa
 
-    optimizer = tfa.optimizers.AdamW(learning_rate=learning_rate, weight_decay=0.0001)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     model.compile(
         optimizer=optimizer,
         metrics=["accuracy"],
@@ -326,6 +238,5 @@ def cnn_visiontransformer(
 
 models = {
     "cnn_residual2": cnn_residual_increasing_filters,
-    "cnn_inception2": cnn_inception2,
     "cnn_visiontransformer": cnn_visiontransformer,
 }

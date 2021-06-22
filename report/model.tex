@@ -7,7 +7,8 @@
 \label{system_scheme}
 \end{figure}
 
-In a general way, the system used consists on the main components. An scheme of the system is shown on figure \ref{system_scheme}.  CNN is an image classification technique and one of the major challenges in speech and acoustic event recognition has been how to best represent the audio signal using an image for this purpose. Two common approaches have been seen in addressing this problem. Firstly, the audio signal is converted to spectrogram images \cite{zhang2015robust}. Secondly, a mel-filter, as used in computing mel-frequency cepstral coefficients (MFCC), is used to form an image-like representation \cite{abdel2014convolutional]}.  To ensure that all images are of an equal size, the audio signal is divided into a fixed number of frames \cite{We refer this as the mel-spectrogram.}. The first component consist on a feature extraction module  from the audio signals. The second module consists on the convolutional neural network architecture. This model will output a probability of each segment to belong to a class. Finally, a post-processing module, takes for each audio input the list of probabiltiies, and produces the final predicted class for that audio.
+In a general way, the system used consists on the main components. An scheme of the system is shown on figure \ref{system_scheme}.  CNN is an image classification technique and one of the major challenges in speech and acoustic event recognition has been how to best represent the audio signal using an image for this purpose. Two common approaches have been seen in addressing this problem. Firstly, the audio signal is converted to spectrogram images \cite{zhang2015robust}. Secondly, a mel-filter, as used in computing mel-frequency cepstral coefficients (MFCC), is used to form an image-like representation \cite{abdel2014convolutional]}.  
+The first component consist on a feature extraction module  from the audio signals. The second module consists on the convolutional neural network architecture. This model will output a probability of each segment to belong to a class. Finally, a post-processing module, takes for each audio input the list of probabiltiies, and produces the final predicted class for that audio.
 
  
 
@@ -96,9 +97,14 @@ An investigation into the application of the Transformer architecture to keyword
 
 \subsection{Experimental Setup}
 
-The Speech Commands Dataset wassplit into training, validation, and test sets, with 80\% training,10\% validation, and 10\% test.
+The Speech Commands Dataset was
+split into training, validation, and test sets, with 80\% training,
+10\% validation, and 10\% test.
 
-To generate training data, we followed Google's preprocessingprocedure by adding background noise to eachsample with a probability of 0:8. The noise is chosen randomly from the background noises providedin the dataset. After evaluated different ratios of noise to add an every signal, we defined a ratio of 0.4 in order that a human ear can still listening the recorded commands with some background noise. 
+To generate training data, we followed Google's preprocessing
+procedure by adding background noise to each
+sample with a probability of 0:8. The noise is chosen randomly from the background noises provided
+in the dataset. After evaluated different ratios of noise to add an every signal, we defined a ratio of 0.4 in order that a human ear can still listening the recorded commands with some background noise. 
 
 For evaluate the models we use the accuracy metric and also we compute the total time used for training the models.
 

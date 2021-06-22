@@ -5,7 +5,7 @@ import numpy as np
 from scipy import stats
 from sklearn.metrics import accuracy_score
 from tensorflow.python.keras.callbacks import Callback
-
+import pickle
 from keyword_spotting.feature_extraction.utils import (extract_features,
                                                        read_wav, windowed)
 
@@ -144,3 +144,11 @@ class PerAudioAccuracy(Callback):
 
     def get(self, metrics, of_class):
         return self.data
+
+
+def evaluate(results_file: Path, dataset_path: Path)->float:
+    with open(results_file, 'rb') as f:
+        results = pickle.load(f)
+    return evaluate_predictions(results[2], dataset_path)
+    
+
