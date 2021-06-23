@@ -1,14 +1,13 @@
 model:
   name: 'cnn_visiontransformer'
   params:
-    learning_rate: 0.00001
+    learning_rate: 0.001
     n_dense_layer: 1
     num_heads: 3
     transformer_layers: 4
     projection_dim: 20
     patch_x: 20
     patch_y: 40
-    dense_dropout: 0.2
   windowed: False
 
 train:

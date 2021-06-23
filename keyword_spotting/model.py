@@ -94,8 +94,8 @@ def cnn_residual_increasing_filters(
 
 
 class PatchEncoder(Layer):
-    def __init__(self, num_patches, projection_dim):
-        super(PatchEncoder, self).__init__()
+    def __init__(self, num_patches, projection_dim, *args, **kwargs):
+        super(PatchEncoder, self).__init__(*args, **kwargs)
         self.num_patches = num_patches
         self.projection = Dense(units=projection_dim)
         self.class_emb = self.add_weight(
@@ -107,6 +107,12 @@ class PatchEncoder(Layer):
             input_dim=num_patches+1, output_dim=projection_dim
         )
 
+    def get_config(self):
+        d = super().get_config()
+        d['num_patches'] = self.num_patches
+        d['projection_dim'] = self.projection_dim
+        return d
+        
     def call(self, patch):
         batch_size = tf.shape(patch)[0]
         positions = tf.range(start=0, limit=self.num_patches + 1, delta=1)
@@ -121,8 +127,8 @@ class PatchEncoder(Layer):
 
 
 class Patches(Layer):
-    def __init__(self, patch_size):
-        super(Patches, self).__init__()
+    def __init__(self, patch_size, *args, **kwargs):
+        super(Patches, self).__init__(*args, **kwargs)
         self.patch_size = patch_size
 
     def call(self, images):
@@ -137,6 +143,11 @@ class Patches(Layer):
         patch_dims = patches.shape[-1]
         patches = tf.reshape(patches, [batch_size, -1, patch_dims])
         return patches
+
+    def get_config(self):
+        d = super().get_config()
+        d['patch_size'] = self.patch_size
+        return d
 
 
 
