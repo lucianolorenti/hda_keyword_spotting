@@ -1,35 +1,15 @@
 
+import numpy as np
 import tensorflow as tf
-
-
 from tensorflow.keras import Model
 from tensorflow.python.keras import backend as K
-from tensorflow.python.keras.layers import (
-    GRU,
-    Activation,
-    Add,
-    AveragePooling1D,
-
-    BatchNormalization,
-    Bidirectional,
-
-    Conv2D,
-    Dense,
-    Dot,
-    Dropout,
-    Embedding,
-    Flatten,
-    GlobalAveragePooling2D,
-    Input,
-    Lambda,
-    Layer,
-    LayerNormalization,
-    MultiHeadAttention,
-    Reshape,
-    Softmax,
-    SpatialDropout2D,
-    GlobalAveragePooling1D,
-)
+from tensorflow.python.keras.layers import (Activation, Add,
+                                            BatchNormalization, Conv2D, Dense,
+                                            Embedding, Flatten,
+                                            GlobalAveragePooling1D,
+                                            GlobalAveragePooling2D, Input,
+                                            Lambda, Layer, LayerNormalization,
+                                            MultiHeadAttention)
 from tensorflow.python.keras.layers.pooling import AveragePooling2D
 from tensorflow.python.ops import math_ops
 
@@ -59,7 +39,6 @@ def cnn_residual_increasing_filters(
         filters=n_filters,
         strides=(1, 1),
         kernel_size=(3, 3),
-        # dilation_rate=int(2**(i // 3)),
         padding="valid",
         use_bias=True,
     )(x)
@@ -72,7 +51,7 @@ def cnn_residual_increasing_filters(
             filters=n_filters,
             strides=(1, 1),
             kernel_size=(3, 3),
-            dilation_rate=int(2 ** (i // 3)),
+            #dilation_rate=int(2 ** (i // 3)),
             padding="same",
             use_bias=False,
         )(x)
@@ -83,7 +62,7 @@ def cnn_residual_increasing_filters(
             filters=n_filters,
             strides=(1, 1),
             kernel_size=(3, 3),
-            dilation_rate=int(2 ** (i // 3)),
+            #dilation_rate=int(2 ** (i // 3)),
             padding="same",
             use_bias=False,
         )(x)
@@ -91,7 +70,6 @@ def cnn_residual_increasing_filters(
         x = BatchNormalization()(x)
 
         x = Add()([original_x, x])
-
     x = GlobalAveragePooling2D()(x)
     x = Flatten()(x)
 
@@ -172,11 +150,10 @@ def cnn_visiontransformer(
     transformer_layers=4,
     projection_dim=16,
     patch_x=8,
-    patch_y=8,
-    dense_dropout=0.5,
+    patch_y=8
 ):
     # implements the Vision Transformer (ViT) model by Alexey Dosovitskiy et al.
-    # for image classification, and demonstrates it on the CIFAR-100 dataset.
+    # for image classification
 
     patch_size = (
         patch_x,
@@ -211,15 +188,15 @@ def cnn_visiontransformer(
         for units in transformer_units:
             x3 = Dense(units, activation=tf.nn.gelu)(x3)
 
-        # Skip connection 2.
-        encoded_patches = Add()([x3, x2])
 
-    # Create a [batch_size, projection_dim] tensor.
-    #representation = GlobalAveragePooling1D()(encoded_patches)
-    representation = LayerNormalization(epsilon=1e-6)(encoded_patches)
+        encoded_patches = Add()([x3, x2])
+    representation = encoded_patches
+
+    if np.prod(representation.shape[1:]) > 400:    
+        representation = GlobalAveragePooling1D()(representation)
+    representation = LayerNormalization(epsilon=1e-6)(representation)
     representation = Flatten()(representation)
-    # representation = Dropout(dense_dropout)(representation)
-    # Add MLP.
+
     x = representation
     for units in range(n_dense_layer):
         x = Dense(max(int(x.shape[1] / 2),number_of_classes), activation=tf.nn.gelu)(x)

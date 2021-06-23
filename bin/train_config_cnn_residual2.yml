@@ -3,7 +3,7 @@ model:
   params:
     n_residuals: 3
     n_filters: 19
-    learning_rate: 0.01
+    learning_rate: 0.1
   windowed: False
     
 
