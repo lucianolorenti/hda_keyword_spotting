@@ -10,13 +10,12 @@ setup(name='KeywordSpotter',
       url='https://www.python.org/sigs/distutils-sig/',
       packages=['keyword_spotting'],
       install_requires=[
-          'opencv-python',
           'pandas',
           'tqdm',
           'scipy',
           'scikit-learn',
-          'librosa',
-          'tensorflow_addons',
-          'simpleaudio'
+          'python_speech_features',
+          'simpleaudio',
+          'pyaudio'
       ],
       )

@@ -7,7 +7,7 @@ model:
     transformer_layers: 4
     projection_dim: 20
     patch_x: 20
-    patch_y: 40
+    patch_y: 10
   windowed: False
 
 train:

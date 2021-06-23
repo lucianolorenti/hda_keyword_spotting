@@ -3,8 +3,10 @@
 
 ## Download the dataset
 ```bash
-wget dataset_url
-tar -zxvf dataset_url
+mkdir dataset
+cd dataset
+wget http://download.tensorflow.org/data/speech_commands_v0.02.tar.gz
+tar -zxf speech_commands_v0.02.tar.gz
 ```
 
 ## Installation
@@ -45,7 +47,7 @@ contain
 Model:
     Name: The name of the model: Possible values are
     Params: An object with the parameters needed to construct the model specified
-    WIndowed: Wether to use the model for windowed predictions or using the whole audio as input
+    Windowed: Wether to use the model for windowed predictions or using the whole audio as input
 
 Train:
     Batch_size:

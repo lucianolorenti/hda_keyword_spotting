@@ -53,7 +53,7 @@ if __name__ == "__main__":
     epochs = config["train"]["epochs"]
 
     output_filename = (
-        config["model"]["name"] + "_" + datetime.now().strftime("%H_%M_%S_%b_%d_%Y")
+        config["model"]["name"] + "_" + datetime.now().strftime("%b_%d_%Y_%H_%M_%S")
     )
 
     model_path = output_path / output_filename
