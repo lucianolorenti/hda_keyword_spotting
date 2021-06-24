@@ -6,7 +6,7 @@ from scipy import stats
 from sklearn.metrics import accuracy_score
 from tensorflow.python.keras.callbacks import Callback
 import pickle
-from keyword_spotting.feature_extraction.utils import (extract_features,
+from keyword_spotting.feature_extraction.utils import (extract_features,extract_features_padding,
                                                        read_wav, windowed)
 
 labels = [
@@ -61,7 +61,6 @@ def confidence(probas, w):
         (numpy.ndarray(float)): An array of confidende values for each frame.
     """    
     labels = probas.shape[1]
-    print(probas.shape)
     confidences = []
     for j in range(1, probas.shape[0]+1):
         hmax = max(0, j-w)
@@ -186,3 +185,9 @@ def mROC(predictions, ytrues):
         FNR.append(FN/P)
                         
             
+def predict_audio(model, signal, sample_rate:int=16000):
+    b = extract_features_padding(signal, sample_rate)
+    return model.predict(b.reshape(1, 100, 40))
+
+def get_label(posteriors):
+    return labels[np.argmax(posteriors)]

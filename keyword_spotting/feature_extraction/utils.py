@@ -33,6 +33,12 @@ def extract_features(signal, sample_rate, NFFT=512, nfilt=40):
     return mfcc(signal, sample_rate, numcep=40, nfilt=nfilt, nfft=NFFT).astype('float32')
 
 
+def extract_features_padding(signal, sample_rate, NFFT=512, nfilt=40):
+    a =  mfcc(signal, sample_rate, numcep=40, nfilt=nfilt, nfft=NFFT).astype('float32')
+    b = np.zeros((100, 40), dtype=np.float32)
+    b[: a.shape[0], :] = a
+    return b
+
 def windowed(data, label, left: int = 30, right: int = 10):
     d = np.array(
         [data[j - left : j + right, :] for j in range(left, data.shape[0] - right)],
