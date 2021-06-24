@@ -1,4 +1,5 @@
 import argparse
+from keyword_spotting.utils import load_model
 import logging
 import pickle
 from pathlib import Path
@@ -33,16 +34,7 @@ if __name__ == "__main__":
     number_of_classes = 12
 
     model_path = args.model_path
-    h5_file = Path(model_path + ".h5")
-    if h5_file.is_file():
-        model_path = str(h5_file)
-    model = tf.keras.models.load_model(
-        model_path,
-        custom_objects={"Patches": Patches, "PatchEncoder": PatchEncoder},
-    )
-
-    # model = models[config["model"]["name"]](input_shape, number_of_classes, **config["model"]["params"])
-    # model.load_weights(args.model_path)
+    model = load_model(model_path)
     model.summary()
 
     _, _, X_test = load_data(data_path)

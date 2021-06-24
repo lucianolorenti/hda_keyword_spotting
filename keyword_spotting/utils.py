@@ -1,3 +1,4 @@
+from keyword_spotting.model import PatchEncoder, Patches
 import pickle
 
 from numpy import random
@@ -9,6 +10,7 @@ from scipy.io.wavfile import write
 import pyaudio
 import wave
 from pathlib import Path
+import tensorflow as tf
 
 NOISE_FILES = [
     "doing_the_dishes.wav",
@@ -67,7 +69,13 @@ def play_audio_from_file(filename: Path):
     play_obj.wait_done()
 
 
-def add_noise(sample_rate, signal, dataset_path: Path, random_noise:bool=True, noise_factor:float=0.1):
+def add_noise(
+    sample_rate,
+    signal,
+    dataset_path: Path,
+    random_noise: bool = True,
+    noise_factor: float = 0.1,
+):
     if (random_noise and np.random.rand() > 0.8) or not random_noise:
         noise_path = dataset_path / "_background_noise_" / np.random.choice(NOISE_FILES)
         fs, data_noise = read_wav(noise_path)
@@ -78,7 +86,62 @@ def add_noise(sample_rate, signal, dataset_path: Path, random_noise:bool=True, n
         )
     return sample_rate, signal
 
-def play_audio_from_array(signal: np.ndarray, sample_rate:int=16000, num_channels:int=1):
-    wave_obj = WaveObject(signal.astype(np.int16), num_channels=num_channels, sample_rate=sample_rate)
+
+def play_audio_from_array(
+    signal: np.ndarray, sample_rate: int = 16000, num_channels: int = 1
+):
+    wave_obj = WaveObject(
+        signal.astype(np.int16), num_channels=num_channels, sample_rate=sample_rate
+    )
     wave_obj.play()
-   
+
+
+def load_model(model_path: str):
+    h5_file = Path(model_path + ".h5")
+    if h5_file.is_file():
+        model_path = str(h5_file)
+    return tf.keras.models.load_model(
+        model_path,
+        custom_objects={"Patches": Patches, "PatchEncoder": PatchEncoder},
+    )
+
+
+def mROC(predictions, ytrues):
+    r = []
+    words = np.unique(ytrues)
+    for w in words:
+        FPR = []
+        TPR = []
+        FNR = []
+        word_y = ytrues == w
+        P = sum(word_y)
+        N = len(word_y) - P
+        for thresh in np.linspace(0, 1, 100):
+            FP = 0
+            TP = 0
+            FN = 0
+            for i in range(predictions.shape[0]):
+                if predictions[i, w] >= thresh:
+                    if word_y[i] == 1:
+                        TP += 1
+                    else:
+                        FP += 1
+                else:
+                    if word_y[i] == 1:
+                        FN += 1
+            FPR.append(FP / N)
+            TPR.append(TP / P)
+            FNR.append(FN / P)
+        r.append((np.array(FPR), np.array(TPR), np.array(FNR)))
+    return r
+
+
+def average_ROC_curves(r, N:int = 500):
+    AA = np.linspace(0, 0.2, N + 1)
+    BB = np.zeros(N)
+    for i in range(len(r)):
+        FPR, TPR, FNR = r[i]
+        for i in range(len(AA) - 1):
+            BB[i] += np.mean(FNR[(FPR >= AA[i]) & (FPR >= AA[i + 1])])
+    BB[i] /= len(r)
+    return AA, BB
