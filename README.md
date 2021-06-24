@@ -1,6 +1,4 @@
-# Keyword Spotting
-
-All you need is Computer Vision.  Image Classification neural networks architectures adapted for small-footprint keyword spotting
+# All you need is Computer Vision.  Image Classification neural networks architectures adapted for small-footprint keyword spotting
 
 María Emilia Charnelli and Luciano Rolando Lorenti
 
