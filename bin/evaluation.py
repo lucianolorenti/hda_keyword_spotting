@@ -31,8 +31,12 @@ if __name__ == "__main__":
     input_shape = [100, 40]
     number_of_classes = 12
 
+    model_path = args.model_path
+    h5_file = Path(model_path +'.h5') 
+    if h5_file.is_file():
+        model_path = str(h5_file)
     model = tf.keras.models.load_model(
-        args.model_path + ".h5",
+        model_path,
         custom_objects={"Patches": Patches, "PatchEncoder": PatchEncoder},
     )
 

@@ -82,7 +82,7 @@ if __name__ == "__main__":
         
     )
     total_time = time() - start
-    model.save(str(model_path)+'.h5')
+    model.save(str(model_path))
 
     if config["model"]["windowed"]:
         results = predictions_per_song(model, X_test)
