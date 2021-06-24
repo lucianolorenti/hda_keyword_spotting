@@ -12,7 +12,7 @@ tar -zxf speech_commands_v0.02.tar.gz
 ## Installation
 
 ```bash
-pip install -e .
+pip install -e hda_keyword_spotting/
 ```
 
 # Dataset creation
