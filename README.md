@@ -1,5 +1,6 @@
-# Installation
+# All you need is Computer Vision.  Image Classification neural networks architectures adapted for small-footprint keyword spotting
 
+María Emilia Charnelli and Luciano Rolando Lorenti
 
 ## Download the dataset
 ```bash
@@ -12,7 +13,7 @@ tar -zxf speech_commands_v0.02.tar.gz
 ## Installation
 
 ```bash
-pip install -e .
+pip install -e hda_keyword_spotting/
 ```
 
 # Dataset creation
@@ -41,7 +42,7 @@ python bin/build_dataset.py  \
 The background noise folder will be use for the silence label, and for doing data augmentation on the audios.
 
 # Fitting the model
-The model are fitted with the bin/fit.py. A configuration file must be provided to the program. The configuration file must 
+The model are fitted with the `bin/train.py`. A configuration file must be provided to the program. The configuration file must 
 contain
 
 Model:
@@ -68,4 +69,13 @@ train:
   batch_size: 8
   epochs: 2
   reduce_on_plateau: True
+```
+```bash
+python bin/train.py --config bin/train_config_vit.yml --output-dir OUTPUT_DIR --dataset DATASET_PATH
+```    
+
+
+# Evaluating the model
+```bash
+python bin/evaluation.py --model-path models/res3 --dataset DATASET_PATH
 ```

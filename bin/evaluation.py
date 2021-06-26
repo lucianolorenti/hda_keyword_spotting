@@ -1,16 +1,18 @@
 import argparse
-from keyword_spotting.train import build_dataset_generator, load_data
+from keyword_spotting.utils import load_model
 import logging
 import pickle
-
 from pathlib import Path
-import tensorflow as tf
-from keyword_spotting.predictions import evaluate_predictions
-from sklearn.metrics import accuracy_score
-import yaml
-from keyword_spotting.model import models
 from time import time
-from keyword_spotting.model import Patches, PatchEncoder
+
+import matplotlib.pyplot as plt
+import tensorflow as tf
+import yaml
+from keyword_spotting.model import PatchEncoder, Patches, models
+from keyword_spotting.predictions import evaluate_predictions, labels
+from keyword_spotting.train import build_dataset_generator, load_data
+from sklearn.metrics import (ConfusionMatrixDisplay, accuracy_score,
+                             confusion_matrix)
 
 logging.basicConfig()
 logger = logging.getLogger("hda")
@@ -32,16 +34,7 @@ if __name__ == "__main__":
     number_of_classes = 12
 
     model_path = args.model_path
-    h5_file = Path(model_path +'.h5') 
-    if h5_file.is_file():
-        model_path = str(h5_file)
-    model = tf.keras.models.load_model(
-        model_path,
-        custom_objects={"Patches": Patches, "PatchEncoder": PatchEncoder},
-    )
-
-    # model = models[config["model"]["name"]](input_shape, number_of_classes, **config["model"]["params"])
-    # model.load_weights(args.model_path)
+    model = load_model(model_path)
     model.summary()
 
     _, _, X_test = load_data(data_path)
@@ -55,3 +48,10 @@ if __name__ == "__main__":
     print(f"Accuracy: {accuracy_score(y_true, y_pred)}")
     print(f"Train Time: {train_time}")
     print(f"Test Time: {total_time}")
+
+    cm = confusion_matrix(y_true, y_pred)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
+    fig, ax = plt.subplots(figsize=(11, 11))
+    disp.plot(ax=ax)
+    fig.tight_layout()
+    fig.savefig('cm.png')

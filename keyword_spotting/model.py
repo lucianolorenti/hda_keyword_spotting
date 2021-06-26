@@ -18,7 +18,7 @@ def ExpandDimension():
     return Lambda(lambda x: K.expand_dims(x))
 
 
-def cnn_residual_increasing_filters(
+def cnn_residual(
     input_shape, number_of_classes, learning_rate=0.001, n_filters=32, n_residuals=3
 ):
 
@@ -152,7 +152,7 @@ class Patches(Layer):
 
 
 
-def cnn_visiontransformer(
+def visiontransformer(
     input_shape,
     number_of_classes,
     learning_rate=0.001,
@@ -225,6 +225,6 @@ def cnn_visiontransformer(
 
 
 models = {
-    "cnn_residual2": cnn_residual_increasing_filters,
-    "cnn_visiontransformer": cnn_visiontransformer,
+    "cnn_residual2": cnn_residual,
+    "cnn_visiontransformer": visiontransformer,
 }

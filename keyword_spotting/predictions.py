@@ -6,7 +6,7 @@ from scipy import stats
 from sklearn.metrics import accuracy_score
 from tensorflow.python.keras.callbacks import Callback
 import pickle
-from keyword_spotting.feature_extraction.utils import (extract_features,
+from keyword_spotting.feature_extraction.utils import (extract_features,extract_features_padding,
                                                        read_wav, windowed)
 
 labels = [
@@ -61,7 +61,6 @@ def confidence(probas, w):
         (numpy.ndarray(float)): An array of confidende values for each frame.
     """    
     labels = probas.shape[1]
-    print(probas.shape)
     confidences = []
     for j in range(1, probas.shape[0]+1):
         hmax = max(0, j-w)
@@ -119,11 +118,16 @@ def label_from_file(audio_file:str)->int:
     label = Path(audio_file).resolve().parts[-2]
     return labels_dict[label]
 
+
+def true_targets(X):
+    return [label_from_file(file) for file in X]
+
+
 def evaluate_predictions(predictions, data_path:Path):
     from keyword_spotting.train import load_data
     _, _, X_test = load_data(data_path)
     y_pred = np.argmax(predictions, axis=1)
-    y_true = [label_from_file(file) for file in X_test]
+    y_true = true_targets(X_test)
     return y_true, y_pred
 
 
@@ -152,3 +156,38 @@ def evaluate(results_file: Path, dataset_path: Path)->float:
     return evaluate_predictions(results[2], dataset_path)
     
 
+
+
+def mROC(predictions, ytrues):
+    FPR = []
+    TPR = []
+    FNR = []
+    words = np.unique(ytrues)
+    for w in words:    
+        word_y = ytrues==w
+        P = sum(word_y)
+        N = len(word_y) - P
+        for thresh in np.linspace(0, 1, 50):
+            FP=0
+            TP=0
+            FN=0
+            for i in np.where(predictions.shape[0]):
+                if predictions[i, w] >= thresh:
+                    if word_y[i] == 1:
+                        TP += 1
+                    else:
+                        FP += 1
+                else:
+                    if word_y[i] == 1:
+                        FN += 1
+        FPR.append(FP/N)
+        TPR.append(TP/P)
+        FNR.append(FN/P)
+                        
+            
+def predict_audio(model, signal, sample_rate:int=16000):
+    b = extract_features_padding(signal, sample_rate)
+    return model.predict(b.reshape(1, 100, 40))
+
+def get_label(posteriors):
+    return labels[np.argmax(posteriors)]
